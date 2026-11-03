@@ -20,3 +20,55 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* --- Fix 1: comparing prices and filtering --- */
+.filter-bar{display:flex;flex-wrap:wrap;align-items:end;gap:14px;padding:0 0 18px}
+.filter{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#4d455f}
+.filter input[type=number],.filter select{border:1px solid #cfc8dc;background:#fff;border-radius:9px;padding:10px 12px;font-size:13px;min-width:140px;color:#3f3555}
+.filter.check{flex-direction:row;align-items:center;gap:8px;padding-bottom:10px}
+.filter.check input{width:17px;height:17px;accent-color:#7956c3}
+.clear-filters{border:1px solid #cfc8dc;background:#fff;color:#5b3fa0;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600}
+.result-count{margin:0 0 10px auto;font-size:13px;font-weight:600;color:#4d455f}
+.price-line{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.price-line .price{font:800 22px Outfit,sans-serif;color:#4b3585}
+.price-line .instock,.price-line .soldstatus{font-size:10px;font-weight:800;letter-spacing:.08em}
+.instock{color:#13694e}.soldstatus{color:#a03b3e}
+.prod-details h3{font-size:16px;margin:8px 0 6px}
+.prod-details p{font-size:13px;color:#5f596c}
+.prod-details .pickup-line{font-size:12px;min-height:0;margin:6px 0 12px;color:#5f596c;-webkit-line-clamp:1}
+.stamp{font-size:11px;color:#4d4068}
+.category-caption{font-size:11px;color:#4d4560}
+.product.is-sold{opacity:.62}
+.product.is-sold .price{text-decoration:line-through;color:#7a7286}
+.sold-ribbon{position:absolute;z-index:1;top:12px;right:12px;background:#a03b3e;color:#fff;font-size:11px;font-weight:800;padding:5px 10px;border-radius:100px;letter-spacing:.06em}
+.details-button{font-size:13px;color:#4b3585}
+.noresults{grid-column:1/-1;display:flex;flex-direction:column;align-items:flex-start;gap:12px;color:#5f596c}
+.noresults p{margin:0}
+.search input,.sort select,.category-row button{font-size:13px}
+.category-row button{color:#4d455f}
+:focus-visible{outline:3px solid #2f6fed;outline-offset:2px}
+.search:focus-within{outline:3px solid #2f6fed;outline-offset:1px}
+.search input:focus-visible{outline:none}
+
+/* --- Fix 2: per-field form errors --- */
+.field-grid label.wide small,.field-grid .photo-field small{font-weight:400}
+.field-error{color:#a32226;font-size:12px;font-weight:600}
+.field-error::before{content:"⚠ "}
+.field-grid input.invalid,.field-grid select.invalid{border-color:#c0282d;box-shadow:0 0 0 1px #c0282d}
+.field-grid input,.field-grid select,.field-grid textarea{font-size:14px}
+.field-grid label{font-size:13px}
+.alert{background:#fff0ee;color:#8f1d21;border:1px solid #f0b9b6;font-size:13px;font-weight:600}
+.modal-head p{color:#675d78;font-size:13px}
+.field-grid .email-helper{color:#675f73}
+
+/* --- Fix 3: photo upload --- */
+.photo-field{grid-column:span 2;display:flex;flex-direction:column;gap:8px}
+.photo-label{font-size:13px;font-weight:600;color:#5c546f}
+.photo-previews{display:flex;flex-wrap:wrap;gap:10px}
+.photo-preview{position:relative;width:96px;height:78px;border-radius:10px;overflow:hidden;border:1px solid #dcd7e6}
+.photo-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-preview em{position:absolute;left:4px;bottom:4px;background:#352859;color:#fff;font-size:10px;font-style:normal;font-weight:700;padding:2px 6px;border-radius:100px}
+.photo-preview button{position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:50%;background:#211b31cc;color:#fff;font-size:15px;line-height:1;display:grid;place-items:center;padding:0}
+.photo-add{width:96px;height:78px;border:2px dashed #a899cc;background:#faf8ff;border-radius:10px;color:#4b3585;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.photo-add span{font-size:20px}
+@media(max-width:600px){.photo-field{grid-column:span 1}.result-count{margin-left:0;width:100%}.filter{flex:1 1 140px}}
