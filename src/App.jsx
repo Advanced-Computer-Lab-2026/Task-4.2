@@ -46,7 +46,7 @@ export default function App(){
  const [notice,setNotice] = useState('');
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+ const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return [...a.filter(x=>x.status!=='sold'),...a.filter(x=>x.status==='sold')];},[items,category,query,sort]); // sold items always go last
  function startEdit(item){if(item&&item.owner!=='you')return;setErrors({});setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
  function setField(name,value){setEditor(s=>({...s,form:{...s.form,[name]:value}}));setErrors(old=>{const next={...old};delete next[name];return next;});}
  const errorProps = name => errors[name] ? {'aria-invalid':'true','aria-describedby':`${name}-error`} : {};
