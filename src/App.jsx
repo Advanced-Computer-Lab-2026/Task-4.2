@@ -17,7 +17,7 @@ const seed = [
   { id: 'm8', title: 'Sketching kit', category: 'other', condition: 'like-new', price: 180, description: 'Charcoal pencils, graphite pencils, blending tools and an A5 sketch pad. Some pencils have been lightly used, but the set still has plenty of material for design practice and drawing assignments.', status: 'active', owner: 'other', seller: 'Salma', sellerEmail: 'salma.seller@example.com', pickup: 'Meet outside the GUC architecture studios', photos: [photo('photo-1758521232691-613561977b6a'), photo('photo-1771366629879-8b3128ee62ca')], emoji: '🎨' },
 ];
 
-const emptyForm = { title: '', price: '', category: '', condition: '', description: '', pickup: '', status: 'active' };
+const emptyForm = { title: '', price: '', category: '', condition: '', description: '', pickup: '', photoUrl: '', status: 'active' };
 
 function saved() {
   try {
@@ -79,6 +79,23 @@ export default function App() {
     return next;
   }, [items, category, query, sort]);
 
+  function handlePhotoUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditor((current) => ({
+        ...current,
+        form: {
+          ...current.form,
+          photoUrl: String(reader.result || ''),
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   function startEdit(item) {
     if (item && item.owner !== 'you') return;
     setError('');
@@ -92,6 +109,7 @@ export default function App() {
             condition: item.condition,
             description: item.description,
             pickup: item.pickup || '',
+            photoUrl: item.photos?.[0] || '',
             status: item.status,
           }
         : { ...emptyForm },
@@ -109,13 +127,18 @@ export default function App() {
     }
 
     const original = editor.id ? items.find((x) => x.id === editor.id) : null;
+    const photoUrl = (f.photoUrl || '').trim();
+    const photos = photoUrl
+      ? [photoUrl, ...(original?.photos || []).filter((src) => src !== photoUrl)]
+      : original?.photos || [];
+
     const next = {
       ...f,
       title: f.title.trim(),
       price: Number(f.price),
       description: f.description.trim(),
       pickup: f.pickup.trim(),
-      photos: original?.photos || [],
+      photos,
       emoji: original?.emoji || '📦',
       owner: 'you',
       seller: currentUser.name,
@@ -407,6 +430,16 @@ export default function App() {
                       <span>Description</span>
                       <textarea value={editor.form.description} onChange={(e) => setEditor((s) => ({ ...s, form: { ...s.form, description: e.target.value } }))} placeholder="Description" rows="5" />
                     </label>
+                    <label className="wide photo-upload-field">
+                      <span>Upload photo</span>
+                      <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                      <small className="email-helper">Choose a clear image from your device.</small>
+                    </label>
+                    {editor.form.photoUrl && (
+                      <div className="wide upload-preview-wrap">
+                        <img src={editor.form.photoUrl} alt="Selected item preview" className="upload-preview" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
