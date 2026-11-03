@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 const KEY = 'acl-marketplace-v3';
 const categories = ['all', 'textbooks', 'electronics', 'furniture', 'clothing', 'other'];
 const conditions = ['new', 'like-new', 'used', 'worn'];
+const sortOptions = {featured:'Featured', low:'Price: low to high', high:'Price: high to low'};
 const currentUser = {name: 'You', email: 'you@example.com'}; // Demo account; no login backend
 const photo = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=82`;
 const seed = [
@@ -33,10 +34,16 @@ function ListingImage({src, alt, emoji, className=''}) {
    ? <img className={className} src={src} alt={alt} loading="lazy" onError={() => setBroken(true)} />
    : <span className="item-emoji" aria-label="Photo unavailable">{emoji || '📦'}</span>;
 }
+function ProductCard({item, onOpen}) {
+ return <article className="product"><div className="photo"><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></div><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3><button className="card-open" onClick={()=>onOpen(item.id)}>{item.title}</button></h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div></div></article>;
+}
 export default function App(){
+ const [page,setPage] = useState('browse'); // 'browse' or 'mine'
  const [items,setItems] = useState(saved);
  const [query,setQuery] = useState('');
- const [category,setCategory] = useState('all');
+ const [searches,setSearches] = useState([]); // Terms added to the filter bubbles with Enter
+ const [types,setTypes] = useState([]); // Empty means every item type
+ const [hideSold,setHideSold] = useState(false);
  const [sort,setSort] = useState('featured');
  const [selected,setSelected] = useState(null);
  const [editor,setEditor] = useState(null); // null or {id,form}
@@ -45,21 +52,48 @@ export default function App(){
  const [notice,setNotice] = useState('');
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+ useEffect(()=>{window.scrollTo(0,0);},[page]);
+ const listing = useMemo(()=>{const terms=[...searches,query].map(s=>s.trim().toLowerCase()).filter(Boolean);let a=items.filter(x=>{const text=`${x.title} ${x.category} ${x.description}`.toLowerCase();return x.owner!=='you'&&(types.length===0||types.includes(x.category))&&(!hideSold||x.status!=='sold')&&terms.every(t=>text.includes(t));});if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,types,hideSold,searches,query,sort]);
+ const myListings = items.filter(x=>x.owner==='you');
+ const noticeBar = notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>;
+ const activeFilters = [
+  ...searches.map(term=>({key:`search-${term}`,label:`Search: ${term}`,remove:()=>setSearches(s=>s.filter(x=>x!==term))})),
+  ...(sort!=='featured'?[{key:'sort',label:sortOptions[sort],remove:()=>setSort('featured')}]:[]),
+  ...types.map(c=>({key:c,label:cap(c),remove:()=>toggleType(c)})),
+  ...(hideSold?[{key:'sold',label:'Excluding sold',remove:()=>setHideSold(false)}]:[]),
+ ];
+ function openPage(p){setPage(p);setNotice('');}
+ function toggleType(c){setTypes(t=>t.includes(c)?t.filter(x=>x!==c):[...t,c]);}
+ function addSearch(event){event.preventDefault();const term=query.trim();if(term&&!searches.some(s=>s.toLowerCase()===term.toLowerCase()))setSearches([...searches,term]);setQuery('');}
  function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
  function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
- if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);setPage('mine');}
+ function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setSearches([]);setTypes([]);setHideSold(false);setSort('featured');setNotice('Example items restored.');}
  return <div className="market-app">
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
+  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setTypes([]);openPage('browse')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><button aria-current={page==='browse'?'page':undefined} onClick={()=>openPage('browse')}>Browse items</button><button aria-current={page==='mine'?'page':undefined} onClick={()=>openPage('mine')}>My listings</button></nav><div className="nav-actions"><span className="usercircle">Y</span></div></header>
   <main>
-   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
-   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
-    <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
-    {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
-   </section>
+   {page==='browse'?<section className="discovery"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div></div>
+    <div className="browse-layout">
+     <aside className="filter-card" aria-label="Filters">
+      <h3>Filters</h3>
+      <form onSubmit={addSearch}><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label></form>
+      <label className="filter-sort"><span>Sort by:</span><select value={sort} onChange={e=>setSort(e.target.value)}>{Object.entries(sortOptions).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
+      <fieldset><legend>Item type</legend><div className="filter-options">{categories.slice(1).map(c=><label key={c}><input type="checkbox" checked={types.includes(c)} onChange={()=>toggleType(c)}/>{cap(c)}</label>)}</div></fieldset>
+      <label className="filter-sold"><input type="checkbox" checked={hideSold} onChange={e=>setHideSold(e.target.checked)}/>Exclude sold items</label>
+     </aside>
+     <div>
+      {activeFilters.length>0&&<ul className="active-filters" aria-label="Active filters">{activeFilters.map(f=><li key={f.key}>{f.label}<button aria-label={`Remove filter: ${f.label}`} onClick={f.remove}>×</button></li>)}</ul>}
+      {noticeBar}
+      <div className="listing-grid">{listing.map(item=><ProductCard key={item.id} item={item} onOpen={setSelected}/>)}{listing.length===0&&<p className="noresults">No listings match your search or filters.</p>}</div>
+     </div>
+    </div>
+   </section>:<section className="discovery"><div className="discover-top"><div><p className="section-kicker">YOUR ITEMS</p><h2>My listings</h2><p>Open an item to edit it or mark it as sold.</p></div><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div>
+    <div className="my-listings">
+     {noticeBar}
+     <div className="listing-grid full">{myListings.map(item=><ProductCard key={item.id} item={item} onOpen={setSelected}/>)}{myListings.length===0&&<p className="noresults">You haven't listed anything yet.</p>}</div>
+    </div>
+   </section>}
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
   </main>
   {selected&&(()=>{
