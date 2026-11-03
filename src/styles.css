@@ -20,3 +20,67 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+.navigation{position:relative}
+.discovery{margin:32px auto 43px}
+.filter-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:22px 0 20px}
+.category-row{flex:1;min-width:0;gap:8px;overflow-x:auto;padding:0}
+.category-row button{padding:10px 15px}
+.discover-right{flex-shrink:0}
+.photo{height:220px;cursor:pointer}
+.product{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+.product:hover,.product:focus-visible{transform:translateY(-3px);box-shadow:0 12px 28px #44335118;outline:none}
+.stamp{font-size:13px;padding:7px 12px}
+.prod-topline{align-items:center}
+.soldstatus{display:inline-flex;align-items:center;border-radius:999px;background:#fff0f0;color:#bd3b43;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.costline span{color:#777181;font-size:14px;font-weight:600}
+.item-page,.sell-page,.page-shell{max-width:1160px;margin:34px auto 70px}
+.back-link{border:0;background:transparent;color:#7057a2;font-size:14px;font-weight:700;padding:8px 0;margin-bottom:20px}
+.item-page-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:44px;align-items:start}
+.item-gallery,.item-information,.sell-page-card{background:#fff;border:1px solid #e9e5ec;border-radius:22px;padding:28px;box-shadow:0 7px 20px #44335107}
+.detail-visual{width:100%;aspect-ratio:4/3;height:auto;background:#f2eff8;border-radius:16px;display:grid;place-items:center;overflow:hidden;margin-bottom:16px}
+.detail-img{width:100%;height:100%;object-fit:contain}
+.detail-thumbs{display:flex;gap:10px;overflow-x:auto}
+.thumb{width:76px;height:68px;flex:0 0 auto;padding:3px;border:2px solid transparent;border-radius:10px;background:#f3f0f8;overflow:hidden}
+.thumb.active{border-color:#7956c3}
+.thumb-img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.item-information{padding:34px;position:sticky;top:24px}
+.item-information h1,.page-heading h1{font:700 32px Outfit,sans-serif;margin:8px 0 12px;color:#29213b}
+.item-information h2{font:700 25px Outfit,sans-serif;color:#6548a2;margin:0 0 18px}
+.item-information .item-description{font-size:15px;line-height:1.75;color:#6d667d}
+.detail-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}
+.detail-meta p{margin:0;padding:14px;background:#f8f6fb;border-radius:12px;color:#6d667d;font-size:13px;line-height:1.7}
+.detail-meta strong{color:#403653}
+.soldstatus-large{width:max-content;margin:0 0 18px;font-size:13px}
+.fineprint{font-size:13px;color:#90899e}
+.contact-seller{display:inline-flex;align-items:center}
+.sell-page{max-width:850px}
+.sell-page-card{padding:34px}
+.page-heading h1{margin-top:5px}
+.page-heading>p:last-child{color:#8e8799;font-size:14px}
+.field-grid{gap:20px;margin-top:28px}
+.field-grid label{font-size:14px}
+.field-grid input,.field-grid select,.field-grid textarea{font-size:14px}
+.field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
+.field-grid .email-helper{font-size:12px;color:#978fa2;font-weight:400;line-height:1.5}
+footer{width:100%}
+@media(max-width:1050px){
+  .filter-toolbar{align-items:flex-start;flex-direction:column}
+  .category-row{width:100%}
+  .discover-right{width:100%}
+}
+@media(max-width:700px){
+  .filter-toolbar{gap:14px}
+  .discover-right{flex-wrap:wrap}
+  .search{flex:1;min-width:180px}
+  .search input{min-width:80px;width:100%}
+  .sort{flex:1}
+  .sort select{min-width:0;width:100%}
+  .photo{height:240px}
+  .item-page,.sell-page,.page-shell{margin:24px auto 45px}
+  .item-page-grid{grid-template-columns:1fr;gap:18px}
+  .item-gallery,.item-information,.sell-page-card{padding:20px}
+  .item-information{position:static}
+  .item-information h1,.page-heading h1{font-size:28px}
+  .detail-meta{grid-template-columns:1fr}
+}
