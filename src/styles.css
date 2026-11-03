@@ -20,3 +20,8 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+.price-filter{display:flex;align-items:center;gap:7px;color:#625a70;font-size:12px}.price-filter>span:first-child{font-weight:700}.price-filter label{display:block}.price-filter input{width:88px;border:1px solid #e4dfea;border-radius:8px;background:#fff;color:#3d354d;padding:9px 8px;font-size:11px}.price-filter input:focus{outline:2px solid #c9b9eb;outline-offset:1px}.price-dash{color:#a49aac}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:900px){.discover-top{align-items:stretch;flex-direction:column}.discover-right{flex-wrap:wrap}.price-filter{flex:1 1 220px}}
+@media(max-width:600px){.discover-right{align-items:stretch;flex-direction:column}.search,.sort,.price-filter{width:100%}.price-filter input{flex:1;width:auto}.price-filter label{flex:1}}
+.details-button{background:#7956c3;color:#fff;border-color:#7956c3;transition:background .2s ease,border-color .2s ease}.details-button:hover{background:#62429f;border-color:#62429f}
+.photo-field input[type=file]{padding:9px;background:#faf9fe;border:1px dashed #cfc4e5;border-radius:9px;color:#625a70}.photo-field .email-helper{display:block;margin-top:6px}.photo-preview{display:block;width:120px;height:90px;object-fit:cover;border-radius:9px;border:1px solid #e4dfea;margin-top:10px}
