@@ -20,3 +20,27 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* Budget discovery and clear recovery paths. */
+.filter-bar{display:flex;flex-wrap:wrap;align-items:end;gap:16px;margin:0 0 24px;padding:18px 0;border-block:1px solid #e4dfeb}
+.filter-bar label{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:#534b68}
+.filter-bar input,.filter-bar select{width:190px;min-height:44px;border:1px solid #c7bed5;border-radius:9px;padding:10px;background:#fff;color:#3f3555}
+.filter-bar p{margin:auto 0 12px auto;font-size:14px;color:#534b68;font-variant-numeric:tabular-nums}
+.clear-filters{min-height:44px;padding:10px 14px;background:#fff;border:1px solid #c7bed5;border-radius:9px;color:#534075}
+.clear-filters:hover,.details-button:hover{background:#eee8f7}
+.noresults{grid-column:1/-1;text-align:center;padding:48px 20px;color:#534b68}
+.noresults h3{margin:0;font-size:22px}
+.noresults p{margin:12px 0 24px;line-height:1.6}
+/* Native dialogs contain keyboard focus and make the background inert. */
+dialog.detail-panel,dialog.sell-modal{border:0;color:inherit;margin:auto;max-height:calc(100dvh - 32px);width:min(710px,calc(100% - 32px));overscroll-behavior:contain}
+dialog.detail-panel{width:min(490px,calc(100% - 32px))}
+dialog::backdrop{background:#211b3180}
+.close{width:44px;height:44px;z-index:2}
+.modal-head{padding-right:42px}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid #624099;outline-offset:3px}
+.search:focus-within{outline:3px solid #624099;outline-offset:3px}
+.field-grid [aria-invalid="true"]{border:2px solid #a52f35;background:#fff9f8}
+.field-error{color:#9a242c;font-size:12px;line-height:1.5;font-weight:500}
+.field-grid .email-helper,.modal-head p{color:#655b73}
+.category-row button,.details-button,.sell-cta{min-height:44px}
+@media(max-width:600px){.filter-bar{gap:12px}.filter-bar label{flex:1 1 130px;min-width:0}.filter-bar input,.filter-bar select{width:100%;min-width:0}.filter-bar p{margin:0 auto 0 0;align-self:center}.field-grid input,.field-grid select,.field-grid textarea,.search input,.filter-bar input,.filter-bar select{font-size:16px}.search input{width:100%;min-width:0}.discover-right{max-width:100%}}
