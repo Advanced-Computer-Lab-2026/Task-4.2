@@ -5,6 +5,31 @@
 .photo .listing-img{width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0}
 .photo .stamp,.photo .category-caption{z-index:1}
 .photo .category-caption{background:#ffffffd6;padding:3px 6px;border-radius:5px}
+.search{border-color:#bcb3ca;box-shadow:0 1px 3px #35285912}
+.search:focus-within{border-color:#7956c3;box-shadow:0 0 0 3px #7956c326}
+.search{min-width:290px;padding:13px 15px;background:#fff;border:1.5px solid #a99bbb;box-shadow:0 4px 12px #35285918}
+.search>span{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#eee9f7;color:#6845ae;font-size:16px;font-weight:700}
+.search input{font-size:13px;color:#33284b}
+.search input::placeholder{color:#777083}
+.discover-top{margin-bottom:24px}
+.discover-right{gap:24px}
+.condition-filter{display:flex;align-items:center;gap:8px;margin:0 2px;padding:12px;border:1px solid #e4dfeb;border-radius:9px;background:#fff;white-space:nowrap}
+.condition-filter>span{color:#9c97a6;font-size:11px;font-weight:400;padding:0}
+.condition-filter button{border:0;border-radius:6px;background:transparent;color:#544f68;padding:0;font-size:12px}
+.condition-filter button:hover{color:#6845ae}
+.condition-filter button.on{color:#6845ae;font-weight:700}
+.filter-label{align-self:center;color:#756d82;font-size:11px;font-weight:700;letter-spacing:.04em;margin-right:2px}
+.category-row{align-items:center;border-bottom:1px solid #eeeaf1}
+.filter-groups{margin-bottom:20px}
+.filter-groups .category-row{padding:12px 0 10px}
+.condition-row{border-bottom:0}
+@media(max-width:600px){.filter-label{min-width:62px}.filter-groups .category-row{gap:7px;padding:9px 0}.filter-groups .category-row button{padding:8px 12px}.condition-row{overflow-x:auto}.search{min-width:0;width:100%;padding:12px 14px}.condition-filter{flex:1;overflow-x:auto}.condition-filter button{padding:8px 9px}}
+.navigation nav{gap:6px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.navigation nav::-webkit-scrollbar{display:none}
+.navigation nav button{padding:8px 10px;border-radius:8px;white-space:nowrap;font-size:12px}
+.navigation nav button:hover{background:#f2eef9;color:#5d3e9d}
+.navigation nav button.selected{background:#3d315b;color:#fff;font-weight:700}
+@media(max-width:970px){.navigation nav{display:flex;flex:1;min-width:0}}
 .photo:has(.listing-img){background:#edeaf0}
 .detail-visual{overflow:hidden;position:relative;background:#f3f1f6}
 .detail-visual .detail-img{display:block;width:100%;height:100%;object-fit:cover}
