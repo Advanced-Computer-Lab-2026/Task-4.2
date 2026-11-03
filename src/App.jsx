@@ -1,93 +1,515 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { KEY, categories, conditions, currentUser, seed, emptyForm } from './data.js';
 
-const KEY = 'acl-marketplace-v3';
-const categories = ['all', 'textbooks', 'electronics', 'furniture', 'clothing', 'other'];
-const conditions = ['new', 'like-new', 'used', 'worn'];
-const currentUser = {name: 'You', email: 'you@example.com'}; // Demo account; no login backend
-const photo = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=82`;
-const seed = [
-  {id:'m1', title:'Calculus II textbook', category:'textbooks', condition:'used', price:320, description:'Second-year calculus textbook, complete with all chapters. A few highlighted sections and notes in pencil, but no missing or torn pages. Useful for the midterm and final revision sessions. You can inspect it before deciding.', status:'active', owner:'you', seller:'You', sellerEmail:currentUser.email, pickup:'GUC student area, near the main cafeteria', photos:[photo('photo-1544947950-fa07a98d237f'),photo('photo-1494438639946-1ebd1d20bf85')], emoji:'📚'},
-  {id:'m2', title:'Student desk lamp', category:'furniture', condition:'like-new', price:240, description:'Compact study lamp with warm light, adjustable position and a USB power cable. Used for one semester only. The cable and light both work. Great for a dorm desk or a small workspace.', status:'active', owner:'other', seller:'Mariam', sellerEmail:'mariam.seller@example.com', pickup:'GUC library entrance, weekdays after 1 PM', photos:[photo('photo-1555475384-a0aefc775412')], emoji:'💡'},
-  {id:'m3', title:'Bluetooth headphones', category:'electronics', condition:'used', price:650, description:'Wireless over-ear headphones in good working condition. They connect with Bluetooth and include the original carrying pouch and charging cable. The battery lasts about six hours based on my usage. There are a few cosmetic scratches near one hinge; see the photos. Happy to let you test sound and pairing before buying.', status:'active', owner:'other', seller:'Omar', sellerEmail:'omar.seller@example.com', pickup:'Arrange a meetup at GUC Gate 3', photos:[photo('photo-1599955051125-571f47e04316'),photo('photo-1505740420928-5e560c06d30e'),photo('photo-1546435770-a3e426bf472b')], emoji:'🎧'},
-  {id:'m4', title:'Engineering lab coat', category:'clothing', condition:'new', price:200, description:'White engineering lab coat, medium size, bought for a lab but never worn. Still clean and folded. Suitable for laboratory practical sessions. Please check your required size before arranging pickup.', status:'active', owner:'you', seller:'You', sellerEmail:currentUser.email, pickup:'Meet at GUC main entrance, mornings', photos:[photo('photo-1542058186993-286fdce0b580')], emoji:'🥼'},
-  {id:'m5', title:'Drawing tablet', category:'electronics', condition:'like-new', price:1450, description:'Small USB drawing tablet with pressure-sensitive pen and protective sleeve. Used for a few class illustrations; fully functional. Works with common creative software after installing the manufacturer driver. You are welcome to try the pen and pressure sensitivity on my laptop before buying.', status:'active', owner:'other', seller:'Nour', sellerEmail:'nour.seller@example.com', pickup:'GUC design building reception', photos:[photo('photo-1671087709820-274fdd9ac67a')], emoji:'✏️'},
-  {id:'m6', title:'Used storage shelf', category:'furniture', condition:'worn', price:390, description:'Light wooden storage shelf. Stable and usable, though there are visible scratches from moving rooms. The shelves are best for books, stationery and small storage boxes, not very heavy appliances. Buyer should arrange a way to transport it from near campus.', status:'active', owner:'other', seller:'Youssef', sellerEmail:'youssef.seller@example.com', pickup:'Collect from a public pickup point near GUC, by arrangement', photos:[photo('photo-1692195321701-1a454c79ab02'),photo('photo-1758279746549-d24f3784879d')], emoji:'🗄️'},
-  {id:'m7', title:'MATH 201 workbook', category:'textbooks', condition:'used', price:140, description:'Workbook with practice problems, solutions and lecture notes. All pages present and in readable condition. Some exercises have answers written in pencil. Already sold to another student.', status:'sold', owner:'you', seller:'You', sellerEmail:currentUser.email, pickup:'GUC campus (previous listing)', photos:[photo('photo-1544947950-fa07a98d237f')], emoji:'📖'},
-  {id:'m8', title:'Sketching kit', category:'other', condition:'like-new', price:180, description:'Charcoal pencils, graphite pencils, blending tools and an A5 sketch pad. Some pencils have been lightly used, but the set still has plenty of material for design practice and drawing assignments.', status:'active', owner:'other', seller:'Salma', sellerEmail:'salma.seller@example.com', pickup:'Meet outside the GUC architecture studios', photos:[photo('photo-1758521232691-613561977b6a'),photo('photo-1771366629879-8b3128ee62ca')], emoji:'🎨'},
-];
-const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
-function saved(){try {const value=JSON.parse(localStorage.getItem(KEY));return Array.isArray(value)?value:seed;}catch{return seed;}}
-const cap = s => s==='like-new'?'Like new':(s||'').replace(/\b\w/g,m=>m.toUpperCase());
-function findError(form){
- if(!form.title.trim())return 'Please complete the item title.';
- if(form.price.trim()==='' || !Number.isFinite(Number(form.price)) || Number(form.price)<0)return 'Enter a price of zero or more.';
- if(!categories.slice(1).includes(form.category))return 'Choose a category.';
- if(!conditions.includes(form.condition))return 'Choose an item condition.';
- if(!['active','sold'].includes(form.status))return 'Choose a valid status.';
- return '';
+const MAX_PHOTOS = 4;
+const MAX_COMPARE = 3;
+const budgets = [200, 500, 1000];
+
+const cap = s => s === 'like-new' ? 'Like new' : (s || '').replace(/\b\w/g, m => m.toUpperCase());
+const money = n => `EGP ${Number(n).toLocaleString()}`;
+
+function load() {
+  try {
+    const value = JSON.parse(localStorage.getItem(KEY));
+    return Array.isArray(value) ? value : seed;
+  } catch {
+    return seed;
+  }
 }
-function ListingImage({src, alt, emoji, className=''}) {
- const [broken, setBroken] = useState(false);
- useEffect(() => setBroken(false), [src]);
- return src && !broken
-   ? <img className={className} src={src} alt={alt} loading="lazy" onError={() => setBroken(true)} />
-   : <span className="item-emoji" aria-label="Photo unavailable">{emoji || '📦'}</span>;
+
+function validate(f) {
+  const errors = {};
+  if (!f.title.trim()) errors.title = 'Enter an item title.';
+  if (f.price.trim() === '' || !Number.isFinite(Number(f.price)) || Number(f.price) < 0) errors.price = 'Enter a price of zero or more.';
+  if (!categories.slice(1).includes(f.category)) errors.category = 'Choose a category.';
+  if (!conditions.includes(f.condition)) errors.condition = 'Choose the item condition.';
+  if (!['active', 'sold'].includes(f.status)) errors.status = 'Choose a valid status.';
+  return errors;
 }
-export default function App(){
- const [items,setItems] = useState(saved);
- const [query,setQuery] = useState('');
- const [category,setCategory] = useState('all');
- const [sort,setSort] = useState('featured');
- const [selected,setSelected] = useState(null);
- const [editor,setEditor] = useState(null); // null or {id,form}
- const [error,setError] = useState('');
- const [activePhoto,setActivePhoto] = useState(0);
- const [notice,setNotice] = useState('');
- useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
- useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
- function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
- function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
- if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
- return <div className="market-app">
-  <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
-  <main>
-   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
-   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
-    <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
-    {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
-   </section>
-   <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
-  </main>
-  {selected&&(()=>{
-   const item=items.find(x=>x.id===selected);if(!item)return null;
-   const images=item.photos || [];
-   const subject=encodeURIComponent(`Campus Exchange: ${item.title}`);
-   const body=encodeURIComponent(`Hi ${item.seller},\n\nI'm interested in your listing "${item.title}" (EGP ${item.price}). Is it still available?\n\n`);
-   return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setSelected(null)}>
-    <section className="detail-panel" role="dialog" aria-modal="true" aria-label="Item details">
-     <button className="close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
-     <div className="detail-visual">
-      <ListingImage src={images[activePhoto] || images[0]} alt={`${item.title} photo ${activePhoto+1}`} emoji={item.emoji} className="detail-img" />
-     </div>
-     {images.length>1&&<div className="detail-thumbs" aria-label="Item photos">{images.map((src,index)=><button type="button" key={index} className={activePhoto===index?'thumb active':'thumb'} aria-label={`Show photo ${index+1} of ${images.length}`} aria-pressed={activePhoto===index} onClick={()=>setActivePhoto(index)}><ListingImage src={src} alt="" emoji={item.emoji} className="thumb-img" /></button>)}</div>}
-     <p className="section-kicker">{cap(item.category)} · {cap(item.condition)}</p>
-     <h2>{item.title}</h2>
-     <h3>EGP {item.price.toLocaleString()}</h3>
-     <p className="item-description">{item.description||'No description supplied.'}</p>
-     <div className="detail-meta"><p><strong>Pickup</strong><br/>{item.pickup || 'Arrange directly with seller'}</p><p><strong>Seller</strong><br/>{item.seller}</p></div>
-     <p className="muted">Status: {item.status}</p>
-     {item.owner==='you'
-       ? <button className="sell-cta" onClick={()=>startEdit(item)}>Edit your listing</button>
-       : item.status==='sold'
-         ? <p className="fineprint">This item is marked as sold.</p>
-         : <a className="sell-cta contact-seller" href={`mailto:${item.sellerEmail}?subject=${subject}&body=${body}`}>✉ Contact seller</a>}
-    </section>
-   </div>;
-  })()}
-  {editor&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditor(null)}><section className="sell-modal" role="dialog" aria-modal="true" aria-label={editor.id?'Edit item':'Sell item'}><div className="modal-head"><div><p className="section-kicker">CAMPUS EXCHANGE</p><h2>{editor.id?'Edit your listing':'Sell an item'}</h2><p>Add the details and we'll take care of the rest.</p></div><button className="close" onClick={()=>setEditor(null)}>×</button></div><form onSubmit={submit}><div className="field-grid"><label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label><label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label><label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label><label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label><label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>{editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}</div>{error&&<p className="alert" role="alert">{error}</p>}<div className="modal-foot"><button type="button" onClick={()=>setEditor(null)}>Cancel</button><button className="sell-cta" type="submit">{editor.id?'Save changes':'Publish item'}</button></div></form></section></div>}
- </div>;
+
+// Shrinks an uploaded photo so it fits comfortably in localStorage.
+function resizePhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) return reject(new Error('not-image'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode'));
+      img.onload = () => {
+        const scale = Math.min(1, 900 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function ListingImage({ src, alt, emoji, className = '' }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [src]);
+  return src && !broken
+    ? <img className={className} src={src} alt={alt} loading="lazy" onError={() => setBroken(true)} />
+    : <span className="item-emoji" role="img" aria-label="Photo unavailable">{emoji || '📦'}</span>;
+}
+
+// Dialog shell: Escape to close, focus trap, focus return and background scroll lock.
+function Modal({ label, onClose, className = '', children }) {
+  const ref = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    const node = ref.current;
+    const previous = document.activeElement;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusables = () => [...node.querySelectorAll('button:not([disabled]),a[href],input:not([readonly]):not([disabled]),select,textarea')];
+    (node.querySelector('[data-autofocus]') || focusables()[0] || node).focus();
+    function onKey(e) {
+      if (e.key === 'Escape') { e.stopPropagation(); closeRef.current(); return; }
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    node.addEventListener('keydown', onKey);
+    return () => {
+      node.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+      if (previous && previous.focus) previous.focus();
+    };
+  }, []);
+
+  return (
+    <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <section ref={ref} className={`dialog ${className}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
+        <button type="button" className="close" aria-label="Close" onClick={onClose}>×</button>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function Field({ id, label, required, error, hint, wide, children }) {
+  return (
+    <div className={`field${wide ? ' wide' : ''}`}>
+      <label htmlFor={id}>{label}{required && <span className="req" aria-hidden="true"> *</span>}</label>
+      {children}
+      {hint && <small className="hint" id={`${id}-hint`}>{hint}</small>}
+      {error && <small className="field-error" id={`${id}-err`}>{error}</small>}
+    </div>
+  );
+}
+
+export default function App() {
+  const [items, setItems] = useState(load);
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('all');
+  const [condition, setCondition] = useState('all');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [hideSold, setHideSold] = useState(true);
+  const [scope, setScope] = useState('all'); // 'all' | 'mine'
+  const [sort, setSort] = useState('featured');
+  const [selected, setSelected] = useState(null);
+  const [activePhoto, setActivePhoto] = useState(0);
+  const [editor, setEditor] = useState(null); // null or {id, form, errors}
+  const [compare, setCompare] = useState([]);
+  const [comparing, setComparing] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); }
+    catch { setNotice('Could not save to this browser (storage may be full). Your changes will be lost on reload.'); }
+  }, [items]);
+  useEffect(() => setActivePhoto(0), [selected]);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(''), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const { listing, hiddenSold } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const parsed = Number(maxPrice);
+    const limit = maxPrice.trim() === '' || Number.isNaN(parsed) ? Infinity : parsed;
+    const matches = items.filter(x =>
+      (scope === 'all' || x.owner === 'you') &&
+      (category === 'all' || x.category === category) &&
+      (condition === 'all' || x.condition === condition) &&
+      x.price <= limit &&
+      `${x.title} ${x.category} ${x.description}`.toLowerCase().includes(q));
+    const shown = hideSold ? matches.filter(x => x.status !== 'sold') : matches;
+    if (sort === 'low') shown.sort((a, b) => a.price - b.price);
+    if (sort === 'high') shown.sort((a, b) => b.price - a.price);
+    return { listing: shown, hiddenSold: matches.length - shown.length };
+  }, [items, query, category, condition, maxPrice, hideSold, scope, sort]);
+
+  const filtersActive = query || category !== 'all' || condition !== 'all' || maxPrice !== '' || sort !== 'featured' || scope !== 'all';
+  function clearFilters() {
+    setQuery(''); setCategory('all'); setCondition('all'); setMaxPrice(''); setSort('featured'); setScope('all'); setHideSold(true);
+  }
+  function showResults(next = {}) {
+    if (next.category) setCategory(next.category);
+    if (next.scope) setScope(next.scope);
+    document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function toggleCompare(id) {
+    setCompare(c => c.includes(id) ? c.filter(x => x !== id) : c.length < MAX_COMPARE ? [...c, id] : c);
+  }
+
+  function startEdit(item) {
+    if (item && item.owner !== 'you') return;
+    setSelected(null);
+    setEditor({
+      id: item?.id || null,
+      errors: {},
+      form: item
+        ? { title: item.title, price: String(item.price), category: item.category, condition: item.condition, description: item.description, pickup: item.pickup || '', status: item.status, photos: item.photos || [] }
+        : { ...emptyForm, photos: [] },
+    });
+  }
+  const setField = (name, value) => setEditor(s => ({ ...s, form: { ...s.form, [name]: value }, errors: { ...s.errors, [name]: undefined } }));
+
+  async function addPhotos(fileList) {
+    const files = [...fileList];
+    if (!files.length) return;
+    const room = MAX_PHOTOS - editor.form.photos.length;
+    const results = await Promise.allSettled(files.slice(0, room).map(resizePhoto));
+    const added = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+    const failed = results.length - added.length;
+    const skipped = files.length - room > 0 ? files.length - room : 0;
+    setEditor(s => s && ({
+      ...s,
+      form: { ...s.form, photos: [...s.form.photos, ...added] },
+      errors: { ...s.errors, photos: failed ? 'Some files were not images and were skipped.' : skipped ? `Only ${MAX_PHOTOS} photos fit; extras were skipped.` : undefined },
+    }));
+  }
+  const removePhoto = i => setEditor(s => ({ ...s, form: { ...s.form, photos: s.form.photos.filter((_, n) => n !== i) } }));
+
+  function submit(event) {
+    event.preventDefault();
+    const f = editor.form;
+    const errors = validate(f);
+    if (Object.keys(errors).length) {
+      setEditor(s => ({ ...s, errors }));
+      const first = ['title', 'price', 'category', 'condition', 'status'].find(k => errors[k]);
+      document.getElementById(`f-${first}`)?.focus();
+      return;
+    }
+    const original = editor.id ? items.find(x => x.id === editor.id) : null;
+    const next = {
+      ...f,
+      title: f.title.trim(),
+      price: Number(f.price),
+      description: f.description.trim(),
+      pickup: f.pickup.trim(),
+      emoji: original?.emoji || '📦',
+      owner: 'you',
+      seller: currentUser.name,
+      sellerEmail: currentUser.email,
+    };
+    if (editor.id) {
+      setItems(items.map(x => x.id === editor.id ? { ...x, ...next } : x));
+      setNotice('Changes saved.');
+    } else {
+      setItems([{ ...next, id: `m-${Date.now()}`, status: 'active' }, ...items]);
+      setNotice('Your item is now listed.');
+      setScope('all'); // make sure the new listing is visible
+    }
+    setEditor(null);
+  }
+
+  function reset() {
+    setItems(seed); setSelected(null); setEditor(null); setCompare([]); setComparing(false);
+    clearFilters(); setConfirmReset(false); setNotice('Example items restored.');
+  }
+
+  const bind = name => ({
+    id: `f-${name}`,
+    value: editor.form[name],
+    onChange: e => setField(name, e.target.value),
+    'aria-invalid': editor.errors[name] ? 'true' : undefined,
+    'aria-describedby': editor.errors[name] ? `f-${name}-err` : undefined,
+  });
+
+  const compareItems = compare.map(id => items.find(x => x.id === id)).filter(Boolean);
+  const cheapest = compareItems.length ? Math.min(...compareItems.map(x => x.price)) : null;
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <button className="brand" onClick={() => { clearFilters(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+            <span className="brand-icon" aria-hidden="true">✳</span> CAMPUS<span className="brand-alt">exchange</span>
+          </button>
+          <nav aria-label="Main">
+            <button className={scope === 'all' ? 'nav-on' : ''} onClick={() => showResults({ scope: 'all' })}>Browse</button>
+            <button className={scope === 'mine' ? 'nav-on' : ''} onClick={() => showResults({ scope: 'mine' })}>My listings</button>
+          </nav>
+          <div className="nav-actions">
+            <span className="user" title={currentUser.email}><span className="avatar" aria-hidden="true">Y</span><span className="user-name">{currentUser.name}</span></span>
+            <button className="btn primary" onClick={() => startEdit(null)}>+ Sell an item</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="intro">
+          <h1>Find a good deal on campus.</h1>
+          <p>Compare second-hand items from other students, then list your own. All prices in EGP.</p>
+        </section>
+
+        <section className="filters" aria-label="Search and filters">
+          <div className="field search-field">
+            <label htmlFor="q">Search</label>
+            <input id="q" type="search" placeholder="Search title or description" value={query} onChange={e => setQuery(e.target.value)} />
+          </div>
+          <div className="field budget-field">
+            <label htmlFor="max">Max price (EGP)</label>
+            <input id="max" type="number" inputMode="numeric" min="0" list="budget-options" placeholder="No limit" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            <datalist id="budget-options">{budgets.map(b => <option key={b} value={b} />)}</datalist>
+          </div>
+          <div className="field">
+            <label htmlFor="cat">Category</label>
+            <select id="cat" value={category} onChange={e => setCategory(e.target.value)}>
+              {categories.map(c => <option key={c} value={c}>{c === 'all' ? 'All categories' : cap(c)}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="cond">Condition</label>
+            <select id="cond" value={condition} onChange={e => setCondition(e.target.value)}>
+              <option value="all">Any condition</option>
+              {conditions.map(c => <option key={c} value={c}>{cap(c)}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="sort">Sort by</label>
+            <select id="sort" value={sort} onChange={e => setSort(e.target.value)}>
+              <option value="featured">Featured</option>
+              <option value="low">Price: low to high</option>
+              <option value="high">Price: high to low</option>
+            </select>
+          </div>
+        </section>
+
+        <section id="results" aria-labelledby="results-title">
+          <div className="results-head">
+            <div>
+              <h2 id="results-title">{scope === 'mine' ? 'My listings' : 'Listings'}</h2>
+              <p className="count" aria-live="polite">{listing.length} {listing.length === 1 ? 'item' : 'items'}</p>
+            </div>
+            <div className="results-tools">
+              <label className="check"><input type="checkbox" checked={hideSold} onChange={e => setHideSold(e.target.checked)} /> Hide sold items</label>
+              {filtersActive && <button type="button" className="btn link" onClick={clearFilters}>Clear filters</button>}
+            </div>
+          </div>
+          {hiddenSold > 0 && <p className="hint-line">{hiddenSold} sold {hiddenSold === 1 ? 'item is' : 'items are'} hidden.</p>}
+          {notice && <p className="notice" role="status">{notice} <button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}>×</button></p>}
+
+          <div className="grid">
+            {listing.map(item => {
+              const picked = compare.includes(item.id);
+              const sold = item.status === 'sold';
+              return (
+                <article className={`card${sold ? ' is-sold' : ''}`} key={item.id}>
+                  <button type="button" className="card-photo" onClick={() => setSelected(item.id)} aria-label={`View ${item.title}`}>
+                    <ListingImage src={item.photos?.[0]} alt="" emoji={item.emoji} className="listing-img" />
+                    {sold && <span className="badge sold">Sold</span>}
+                    {item.owner === 'you' && <span className="badge mine">Your listing</span>}
+                  </button>
+                  <div className="card-body">
+                    <p className="price">{money(item.price)}</p>
+                    <h3>{item.title}</h3>
+                    <p className="meta">{cap(item.category)} · {cap(item.condition)}</p>
+                    <p className="where"><span aria-hidden="true">📍</span> {item.pickup || 'Arrange with seller'}</p>
+                    <div className="card-actions">
+                      <button type="button" className="btn secondary" onClick={() => setSelected(item.id)}>View details</button>
+                      <label className="check"><input type="checkbox" checked={picked} disabled={!picked && compare.length >= MAX_COMPARE} onChange={() => toggleCompare(item.id)} /> Compare</label>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {listing.length === 0 && (
+            <div className="empty">
+              <p><strong>No listings match.</strong></p>
+              <p>{scope === 'mine' ? 'You have no listings here yet.' : 'Try a higher budget or fewer filters.'}</p>
+              <div className="empty-actions">
+                {filtersActive && <button type="button" className="btn secondary" onClick={clearFilters}>Clear filters</button>}
+                <button type="button" className="btn primary" onClick={() => startEdit(null)}>Sell an item</button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <footer>
+          <strong>CAMPUS exchange</strong><span>From students, for students.</span>
+          {confirmReset
+            ? <span className="reset-confirm" role="alertdialog" aria-label="Confirm reset">Restore the example items? Your changes will be lost.
+                <button type="button" className="btn danger" onClick={reset}>Yes, reset</button>
+                <button type="button" className="btn link" onClick={() => setConfirmReset(false)}>Cancel</button></span>
+            : <button type="button" className="btn link push" onClick={() => setConfirmReset(true)}>Reset demo</button>}
+        </footer>
+      </main>
+
+      {compare.length > 0 && (
+        <aside className="tray" aria-label="Compare tray">
+          <div className="tray-items">
+            {compareItems.map(x => <span className="tray-chip" key={x.id}>{x.title} · {money(x.price)}<button type="button" aria-label={`Remove ${x.title} from comparison`} onClick={() => toggleCompare(x.id)}>×</button></span>)}
+          </div>
+          <div className="tray-actions">
+            <button type="button" className="btn link" onClick={() => setCompare([])}>Clear</button>
+            <button type="button" className="btn primary" disabled={compare.length < 2} onClick={() => setComparing(true)}>{compare.length < 2 ? 'Pick one more to compare' : `Compare ${compare.length} items`}</button>
+          </div>
+        </aside>
+      )}
+
+      {selected && (() => {
+        const item = items.find(x => x.id === selected);
+        if (!item) return null;
+        const images = item.photos || [];
+        const subject = encodeURIComponent(`Campus Exchange: ${item.title}`);
+        const body = encodeURIComponent(`Hi ${item.seller},\n\nI'm interested in your listing "${item.title}" (EGP ${item.price}). Is it still available?\n\n`);
+        return (
+          <Modal label="Item details" onClose={() => setSelected(null)} className="detail">
+            <div className="detail-visual">
+              <ListingImage src={images[activePhoto] || images[0]} alt={`${item.title} photo ${activePhoto + 1}`} emoji={item.emoji} className="detail-img" />
+            </div>
+            {images.length > 1 && <div className="thumbs" role="group" aria-label="Item photos">{images.map((src, i) =>
+              <button type="button" key={i} className={activePhoto === i ? 'thumb active' : 'thumb'} aria-label={`Show photo ${i + 1} of ${images.length}`} aria-pressed={activePhoto === i} onClick={() => setActivePhoto(i)}>
+                <ListingImage src={src} alt="" emoji={item.emoji} className="thumb-img" />
+              </button>)}</div>}
+            <p className="kicker">{cap(item.category)} · {cap(item.condition)}</p>
+            <h2>{item.title}</h2>
+            <p className="detail-price">{money(item.price)} <span className={`status ${item.status}`}>{cap(item.status)}</span></p>
+            <p className="description">{item.description || 'No description supplied.'}</p>
+            <dl className="meta-grid">
+              <div><dt>Pickup</dt><dd>{item.pickup || 'Arrange directly with seller'}</dd></div>
+              <div><dt>Seller</dt><dd>{item.seller}</dd></div>
+            </dl>
+            <div className="detail-actions">
+              {item.owner === 'you'
+                ? <button type="button" className="btn primary" onClick={() => startEdit(item)}>Edit your listing</button>
+                : item.status === 'sold'
+                  ? <p className="fineprint">This item is marked as sold.</p>
+                  : <a className="btn primary" href={`mailto:${item.sellerEmail}?subject=${subject}&body=${body}`}>✉ Contact seller</a>}
+              <label className="check"><input type="checkbox" checked={compare.includes(item.id)} disabled={!compare.includes(item.id) && compare.length >= MAX_COMPARE} onChange={() => toggleCompare(item.id)} /> Add to compare</label>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {comparing && compareItems.length > 0 && (
+        <Modal label="Compare items" onClose={() => setComparing(false)} className="compare-dialog">
+          <h2>Compare items</h2>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th scope="col"><span className="sr-only">Attribute</span></th>{compareItems.map(x => <th scope="col" key={x.id}>{x.title}</th>)}</tr></thead>
+              <tbody>
+                <tr><th scope="row">Price</th>{compareItems.map(x => <td key={x.id}><strong>{money(x.price)}</strong>{x.price === cheapest && compareItems.length > 1 && <span className="badge best">Lowest</span>}</td>)}</tr>
+                <tr><th scope="row">Condition</th>{compareItems.map(x => <td key={x.id}>{cap(x.condition)}</td>)}</tr>
+                <tr><th scope="row">Category</th>{compareItems.map(x => <td key={x.id}>{cap(x.category)}</td>)}</tr>
+                <tr><th scope="row">Status</th>{compareItems.map(x => <td key={x.id}>{cap(x.status)}</td>)}</tr>
+                <tr><th scope="row">Pickup</th>{compareItems.map(x => <td key={x.id}>{x.pickup || 'Arrange with seller'}</td>)}</tr>
+                <tr><th scope="row">Seller</th>{compareItems.map(x => <td key={x.id}>{x.seller}</td>)}</tr>
+                <tr><th scope="row"><span className="sr-only">Actions</span></th>{compareItems.map(x => <td key={x.id}><button type="button" className="btn secondary" onClick={() => { setComparing(false); setSelected(x.id); }}>View</button></td>)}</tr>
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
+
+      {editor && (() => {
+        const f = editor.form;
+        const previewPrice = f.price.trim() !== '' && Number.isFinite(Number(f.price)) && Number(f.price) >= 0 ? money(f.price) : 'EGP —';
+        return (
+          <Modal label={editor.id ? 'Edit item' : 'Sell item'} onClose={() => setEditor(null)} className="sell">
+            <div className="modal-head">
+              <p className="kicker">Campus Exchange</p>
+              <h2>{editor.id ? 'Edit your listing' : 'Sell an item'}</h2>
+              <p className="muted">Fields marked * are required.</p>
+            </div>
+            <div className="sell-layout">
+              <form onSubmit={submit} noValidate>
+                <div className="form-grid">
+                  <Field id="f-title" label="Item title" required wide error={editor.errors.title}>
+                    <input data-autofocus maxLength={80} placeholder="What are you selling?" {...bind('title')} />
+                  </Field>
+                  <Field id="f-price" label="Price (EGP)" required error={editor.errors.price}>
+                    <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" {...bind('price')} />
+                  </Field>
+                  <Field id="f-category" label="Category" required error={editor.errors.category}>
+                    <select {...bind('category')}><option value="">Select</option>{categories.slice(1).map(c => <option value={c} key={c}>{cap(c)}</option>)}</select>
+                  </Field>
+                  <Field id="f-condition" label="Condition" required error={editor.errors.condition}>
+                    <select {...bind('condition')}><option value="">Select</option>{conditions.map(c => <option value={c} key={c}>{cap(c)}</option>)}</select>
+                  </Field>
+                  {editor.id && (
+                    <Field id="f-status" label="Status" error={editor.errors.status}>
+                      <select {...bind('status')}><option value="active">Active</option><option value="sold">Sold</option></select>
+                    </Field>
+                  )}
+                  <Field id="f-description" label="Description" wide hint="Optional. Mention wear, what's included and why it's a good deal.">
+                    <textarea rows="4" placeholder="Describe your item" {...bind('description')} aria-describedby="f-description-hint" />
+                  </Field>
+                  <Field id="f-pickup" label="Pickup / meetup location" wide hint="Optional. Pick a public spot on campus.">
+                    <input placeholder="e.g. Library entrance, weekdays after 1 PM" {...bind('pickup')} aria-describedby="f-pickup-hint" />
+                  </Field>
+                  <div className="field wide">
+                    <span className="label" id="photos-label">Photos <span className="muted">(optional, up to {MAX_PHOTOS})</span></span>
+                    <div className="photo-row">
+                      {f.photos.map((src, i) => (
+                        <div className="photo-tile" key={i}>
+                          <ListingImage src={src} alt={`Photo ${i + 1}`} emoji="📦" className="thumb-img" />
+                          <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => removePhoto(i)}>×</button>
+                        </div>
+                      ))}
+                      {f.photos.length < MAX_PHOTOS && (
+                        <label className="photo-add">
+                          <span aria-hidden="true">＋</span> Add photo
+                          <input type="file" accept="image/*" multiple onChange={e => { addPhotos(e.target.files); e.target.value = ''; }} aria-labelledby="photos-label" />
+                        </label>
+                      )}
+                    </div>
+                    {editor.errors.photos && <small className="field-error">{editor.errors.photos}</small>}
+                  </div>
+                  <Field id="f-email" label="Seller contact email" wide hint="Taken from your account so buyers can contact you.">
+                    <input id="f-email" value={currentUser.email} readOnly aria-readonly="true" className="readonly-input" aria-describedby="f-email-hint" />
+                  </Field>
+                </div>
+                {Object.values(editor.errors).some(Boolean) && <p className="alert" role="alert">Please fix the highlighted fields.</p>}
+                <div className="modal-foot">
+                  <button type="button" className="btn secondary" onClick={() => setEditor(null)}>Cancel</button>
+                  <button className="btn primary" type="submit">{editor.id ? 'Save changes' : 'Publish item'}</button>
+                </div>
+              </form>
+              <aside className="preview" aria-label="Listing preview">
+                <p className="kicker">Preview</p>
+                <article className="card">
+                  <div className="card-photo static"><ListingImage src={f.photos[0]} alt="" emoji="📦" className="listing-img" /></div>
+                  <div className="card-body">
+                    <p className="price">{previewPrice}</p>
+                    <h3>{f.title.trim() || 'Your item title'}</h3>
+                    <p className="meta">{f.category ? cap(f.category) : 'Category'} · {f.condition ? cap(f.condition) : 'Condition'}</p>
+                    <p className="where"><span aria-hidden="true">📍</span> {f.pickup.trim() || 'Arrange with seller'}</p>
+                  </div>
+                </article>
+              </aside>
+            </div>
+          </Modal>
+        );
+      })()}
+    </div>
+  );
 }
