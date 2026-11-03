@@ -19,4 +19,6 @@
 .contact-seller{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin-top:9px}
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
+.field-grid .field-error{font-size:14px;font-weight:600;color:#a03f43}
+.field-grid [aria-invalid="true"]{border-color:#a03f43;box-shadow:0 0 0 1px #a03f43}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
