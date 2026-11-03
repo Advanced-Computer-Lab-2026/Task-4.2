@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const KEY = 'acl-marketplace-v3';
 const categories = ['all', 'textbooks', 'electronics', 'furniture', 'clothing', 'other'];
@@ -43,8 +43,20 @@ export default function App(){
  const [error,setError] = useState('');
  const [activePhoto,setActivePhoto] = useState(0);
  const [notice,setNotice] = useState('');
+ const [profileOpen,setProfileOpen] = useState(false);
+ const profileMenuRef = useRef(null);
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
+ useEffect(()=>{
+  if(!profileOpen)return;
+  function dismiss(event){
+   if(event.type==='keydown'&&event.key==='Escape'){setProfileOpen(false);return;}
+   if(event.type==='pointerdown'&&!profileMenuRef.current?.contains(event.target))setProfileOpen(false);
+  }
+  document.addEventListener('keydown',dismiss);
+  document.addEventListener('pointerdown',dismiss);
+  return ()=>{document.removeEventListener('keydown',dismiss);document.removeEventListener('pointerdown',dismiss);};
+ },[profileOpen]);
  const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
  function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
  function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
@@ -52,13 +64,23 @@ export default function App(){
  function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
  return <div className="market-app">
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
+  <header className="navigation">
+   <button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button>
+   <nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav>
+   <div className="nav-actions">
+    <button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button>
+    <div className="profile-menu-wrap" ref={profileMenuRef}>
+     <button type="button" className="usercircle" aria-label="Open profile options" aria-haspopup="true" aria-expanded={profileOpen} aria-controls="profile-options" onClick={()=>setProfileOpen(open=>!open)}>Y</button>
+     {profileOpen&&<div className="profile-menu" id="profile-options" role="region" aria-label="Profile options"><div className="profile-summary"><strong>{currentUser.name}</strong><span>{currentUser.email}</span></div><div className="profile-option"><span aria-hidden="true">◉</span> My profile</div><div className="profile-option"><span aria-hidden="true">▤</span> My listings</div><div className="profile-option"><span aria-hidden="true">♡</span> Saved items</div><div className="profile-option"><span aria-hidden="true">✉</span> Messages</div><div className="profile-option"><span aria-hidden="true">⚙</span> Account settings</div><div className="profile-option profile-signout"><span aria-hidden="true">↪</span> Sign out</div></div>}
+    </div>
+   </div>
+  </header>
   <main>
    <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
    <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
     <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
+    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className={`stamp condition-${item.condition}`}>{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
    </section>
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
   </main>
@@ -69,9 +91,9 @@ export default function App(){
    const body=encodeURIComponent(`Hi ${item.seller},\n\nI'm interested in your listing "${item.title}" (EGP ${item.price}). Is it still available?\n\n`);
    return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setSelected(null)}>
     <section className="detail-panel" role="dialog" aria-modal="true" aria-label="Item details">
-     <button className="close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
      <div className="detail-visual">
       <ListingImage src={images[activePhoto] || images[0]} alt={`${item.title} photo ${activePhoto+1}`} emoji={item.emoji} className="detail-img" />
+      <button type="button" className="close detail-close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
      </div>
      {images.length>1&&<div className="detail-thumbs" aria-label="Item photos">{images.map((src,index)=><button type="button" key={index} className={activePhoto===index?'thumb active':'thumb'} aria-label={`Show photo ${index+1} of ${images.length}`} aria-pressed={activePhoto===index} onClick={()=>setActivePhoto(index)}><ListingImage src={src} alt="" emoji={item.emoji} className="thumb-img" /></button>)}</div>}
      <p className="section-kicker">{cap(item.category)} · {cap(item.condition)}</p>
