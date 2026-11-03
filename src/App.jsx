@@ -18,6 +18,23 @@ const seed = [
 const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
 function saved(){try {const value=JSON.parse(localStorage.getItem(KEY));return Array.isArray(value)?value:seed;}catch{return seed;}}
 const cap = s => s==='like-new'?'Like new':(s||'').replace(/\b\w/g,m=>m.toUpperCase());
+async function preparePhoto(file){
+ if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))throw new Error('Choose a JPG, PNG, WEBP, or GIF image.');
+ if(file.size>10*1024*1024)throw new Error('Choose an image smaller than 10 MB.');
+ const source=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>typeof reader.result==='string'?resolve(reader.result):reject(new Error('Unable to read this image.'));reader.onerror=()=>reject(new Error('Unable to read this image.'));reader.readAsDataURL(file);});
+ const image=new Image();
+ await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('This image could not be opened.'));image.src=source;});
+ const scale=Math.min(1,1200/Math.max(image.naturalWidth,image.naturalHeight));
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+ canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+ const context=canvas.getContext('2d');
+ if(!context)throw new Error('Your browser could not process this image.');
+ context.fillStyle='#fff';
+ context.fillRect(0,0,canvas.width,canvas.height);
+ context.drawImage(image,0,0,canvas.width,canvas.height);
+ return canvas.toDataURL('image/jpeg',0.78);
+}
 function findError(form){
  if(!form.title.trim())return 'Please complete the item title.';
  if(form.price.trim()==='' || !Number.isFinite(Number(form.price)) || Number(form.price)<0)return 'Enter a price of zero or more.';
@@ -37,30 +54,54 @@ export default function App(){
  const [items,setItems] = useState(saved);
  const [query,setQuery] = useState('');
  const [category,setCategory] = useState('all');
+ const [listingView,setListingView] = useState('all');
  const [sort,setSort] = useState('featured');
+ const [signedIn,setSignedIn] = useState(true);
  const [selected,setSelected] = useState(null);
  const [editor,setEditor] = useState(null); // null or {id,form}
  const [error,setError] = useState('');
  const [activePhoto,setActivePhoto] = useState(0);
  const [notice,setNotice] = useState('');
+ const [photoBusy,setPhotoBusy] = useState(false);
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
- function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
- function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
- if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ const listing = useMemo(()=>{let a=items.filter(x=>(listingView==='mine'?x.owner==='you':x.status!=='sold')&&(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,listingView,category,query,sort]);
+ function startEdit(item){if(!signedIn||(item&&item.owner!=='you'))return;setSelected(null);setError('');setPhotoBusy(false);setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status,photo:item.photos?.[0] || ''}:{...emptyForm,photo:''}});}
+ async function selectPhoto(event){const file=event.target.files?.[0];event.target.value='';if(!file)return;setError('');setPhotoBusy(true);try{const photoData=await preparePhoto(file);setEditor(current=>current?{...current,form:{...current.form,photo:photoData}}:current);}catch(cause){setError(cause instanceof Error?cause.message:'Unable to process this image.');}finally{setPhotoBusy(false);}}
+ function submit(event){event.preventDefault();if(photoBusy)return;const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const photos=original&&f.photo===original.photos?.[0]?original.photos:(f.photo?[f.photo]:[]);const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos,emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};delete next.photo;
+ if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);document.getElementById('discover')?.scrollIntoView({behavior:'smooth'});}
+ function handleAccountAction(){if(signedIn){setSignedIn(false);setEditor(null);setSelected(null);setListingView('all');setCategory('all');setQuery('');setNotice('Logged out of the demo account. Your listings are unchanged.');}else{setSignedIn(true);setNotice('Signed in as You.');}}
+ function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setListingView('all');setSort('featured');setNotice('Example items restored.');}
  return <div className="market-app">
-  <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
+  <header className="navigation"><button className="brand" disabled={Boolean(editor)} onClick={()=>{setSelected(null);setCategory('all');setListingView('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav aria-label="Main navigation"><button disabled={Boolean(editor)} className={listingView==='all'?'nav-current':''} aria-pressed={listingView==='all'} onClick={()=>{setListingView('all');setCategory('all');setQuery('');document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}}>All listings</button>{signedIn&&<button disabled={Boolean(editor)} className={listingView==='mine'?'nav-current':''} aria-pressed={listingView==='mine'} onClick={()=>{setListingView('mine');setCategory('all');setQuery('');document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}}>My listings</button>}</nav><div className="nav-actions">{signedIn&&<span className="usercircle" aria-label="Signed in as You">Y</span>}<button className="account-action" disabled={Boolean(editor)} onClick={handleAccountAction}>{signedIn?'Log out':'Log in as You'}</button></div></header>
   <main>
-   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
-   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
+   {editor?<section className="sell-page" aria-labelledby="editor-title">
+    <button className="back-link" type="button" onClick={()=>{setEditor(null);setError('');setPhotoBusy(false)}} disabled={photoBusy}>← Back to listings</button>
+    <div className="sell-page-heading"><p className="section-kicker">CAMPUS EXCHANGE</p><h1 id="editor-title">{editor.id?'Edit your listing':'Sell an item'}</h1><p>Add the details below to {editor.id?'update your listing':'list your item for students on campus'}.</p></div>
+    <form className="sell-page-form" onSubmit={submit}>
+     <div className="field-grid">
+      <label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label>
+      <label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label>
+      <label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label>
+      <label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label>
+      <div className="photo-field wide"><label htmlFor="listing-photo">Item photo</label><input id="listing-photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={selectPhoto}/><small>JPG, PNG, WEBP, or GIF. Images are resized for the listing.</small>{photoBusy&&<small role="status">Processing photo…</small>}{editor.form.photo&&<div className="photo-preview"><img src={editor.form.photo} alt="Selected item preview"/><button type="button" onClick={()=>setEditor(s=>({...s,form:{...s.form,photo:''}}))}>Remove photo</button></div>}</div>
+      <label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label>
+      <label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label>
+      <label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>
+      {editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}
+     </div>
+     {error&&<p className="alert" role="alert">{error}</p>}
+     <div className="sell-page-actions"><button type="button" className="secondary-button" onClick={()=>{setEditor(null);setError('')}} disabled={photoBusy}>Cancel</button><button className="sell-cta" type="submit" disabled={photoBusy}>{photoBusy?'Processing photo…':editor.id?'Save changes':'Publish item'}</button></div>
+    </form>
+   </section>:<>
+   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button className="hero-sell-button" onClick={()=>signedIn?startEdit(null):handleAccountAction()}>{signedIn?'+ List an item':'Sign in to sell'}</button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
+   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">{listingView==='mine'?'YOUR CAMPUS LISTINGS':'CURATED FOR YOUR CAMPUS'}</p><h2>{listingView==='mine'?'Your listings.':'Find something good.'}</h2><p>{listingView==='mine'?'Manage your active and sold items.':'Items listed by people around you.'}</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
     <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
+    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">{listingView==='mine'?'You have no listings matching your search.':'No active listings match your search.'}</p>}</div>
    </section>
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
+   </>}
   </main>
   {selected&&(()=>{
    const item=items.find(x=>x.id===selected);if(!item)return null;
@@ -80,7 +121,7 @@ export default function App(){
      <p className="item-description">{item.description||'No description supplied.'}</p>
      <div className="detail-meta"><p><strong>Pickup</strong><br/>{item.pickup || 'Arrange directly with seller'}</p><p><strong>Seller</strong><br/>{item.seller}</p></div>
      <p className="muted">Status: {item.status}</p>
-     {item.owner==='you'
+     {item.owner==='you'&&signedIn
        ? <button className="sell-cta" onClick={()=>startEdit(item)}>Edit your listing</button>
        : item.status==='sold'
          ? <p className="fineprint">This item is marked as sold.</p>
@@ -88,6 +129,5 @@ export default function App(){
     </section>
    </div>;
   })()}
-  {editor&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditor(null)}><section className="sell-modal" role="dialog" aria-modal="true" aria-label={editor.id?'Edit item':'Sell item'}><div className="modal-head"><div><p className="section-kicker">CAMPUS EXCHANGE</p><h2>{editor.id?'Edit your listing':'Sell an item'}</h2><p>Add the details and we'll take care of the rest.</p></div><button className="close" onClick={()=>setEditor(null)}>×</button></div><form onSubmit={submit}><div className="field-grid"><label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label><label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label><label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label><label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label><label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>{editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}</div>{error&&<p className="alert" role="alert">{error}</p>}<div className="modal-foot"><button type="button" onClick={()=>setEditor(null)}>Cancel</button><button className="sell-cta" type="submit">{editor.id?'Save changes':'Publish item'}</button></div></form></section></div>}
  </div>;
 }
