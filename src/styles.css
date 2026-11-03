@@ -20,3 +20,40 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* Detail close button stays above the positioned photo and readable on light images */
+.close{z-index:3}
+.detail-panel .close{background:#fffffff2;box-shadow:0 3px 12px #2a1f4a2e}
+.close:focus-visible,.card-actions button:focus-visible,.owner-actions button:focus-visible,.category-row button:focus-visible{outline:2px solid #7956c3;outline-offset:2px}
+
+/* Consistent frame for card photos so very light images keep a visible edge */
+.photo::after{content:'';position:absolute;inset:0;box-shadow:inset 0 -1px 0 #e4dfeb,inset 0 0 0 1px #2a1f4a0d;pointer-events:none;z-index:1}
+.photo .stamp,.photo .category-caption,.photo .mine-badge{z-index:2}
+
+/* Own listings */
+.product.mine{border-color:#cdbcf0;box-shadow:0 7px 20px #7956c31c}
+.mine-badge{position:absolute;top:12px;right:12px;border-radius:100px;background:#7956c3;color:#fff;padding:6px 10px;font-size:9px;font-weight:800;letter-spacing:.04em}
+.mine-badge.inline{position:static;display:inline-block;margin-left:10px;padding:4px 9px;letter-spacing:.06em;vertical-align:middle}
+.card-actions{display:flex;gap:8px}
+.card-actions .details-button{flex:1}
+.quick-status{border:1px solid #d9cdf2;border-radius:9px;background:#fff;color:#5d43a6;padding:10px 12px;font-size:11px;font-weight:700;white-space:nowrap}
+.quick-status:hover,.ghost-btn:hover{background:#f4effd}
+.row-divider{flex:0 0 1px;background:#e5e1e8;margin:4px 2px}
+.category-row .mine-chip{border-color:#d9cdf2;color:#5d43a6;font-weight:600}
+.category-row .mine-chip.on{background:#7956c3;border-color:#7956c3;color:#fff}
+.noresults{grid-column:1/-1}
+.noresults p{margin:0 0 14px}
+.owner-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px}
+.ghost-btn,.danger-btn{border:1px solid #e3dde9;background:#fff;color:#504364;border-radius:10px;padding:11px 16px;font-weight:700;font-size:12px}
+.danger-btn{border-color:#efcfcd;color:#b0403c;margin-left:auto}
+.danger-btn:hover{background:#fff3f1}
+.danger-btn.solid{background:#b0403c;border-color:#b0403c;color:#fff;margin-left:0}
+.confirm-box{border:1px solid #efcfcd;background:#fff8f7;border-radius:14px;padding:14px 16px;margin-top:9px}
+.confirm-box strong{color:#8f3431;font-size:14px}
+.detail-panel .confirm-box p{margin:4px 0 2px;font-size:12px;color:#7c5d5b}
+
+/* Field-level validation */
+.field-grid [aria-invalid=true]{border-color:#c4534f;background:#fff9f8;box-shadow:0 0 0 3px #c4534f1f}
+.field-grid .field-error{color:#a7403c;font-size:11px;font-weight:600;display:flex;gap:5px;align-items:center}
+.field-grid .field-error::before{content:'!';display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:#c4534f;color:#fff;font-size:9px;font-weight:800;flex-shrink:0}
+@media(max-width:600px){.danger-btn{margin-left:0}}
