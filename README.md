@@ -27,9 +27,10 @@ Users browse listings; creating, editing and marking their own item sold must wo
 
 The demo supports create/edit and stores your updates in browser `localStorage` for this browser. The current demo account email is filled automatically in the Sell form; no separate contact-email entry is needed. Contact Seller opens the default email application with a sample recipient address; it does not send an in-app message. Existing example listings use remote stock photos, which require an internet connection; an icon fallback appears if an image cannot load. **Reset demo** restores the example records. You can assume the current signed-in user is `You`.
 
+Search, category, price, active-only and price-sort controls work together; **Clear filters** returns to the default active-only view. New listings are always active. Your own listings can be edited and marked sold; buyers cannot contact a listing marked sold. The form accepts an optional direct image URL and previews it, with a fallback if the image cannot load. Closing a changed form asks for confirmation.
+
 ## User scenario for this session
 
 A student wants to compare second-hand campus items, find an affordable listing and publish an item of their own.
 
 Your redesign should support the scenario above without removing or weakening the existing features.
-
