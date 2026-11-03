@@ -18,13 +18,34 @@ const seed = [
 const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
 function saved(){try {const value=JSON.parse(localStorage.getItem(KEY));return Array.isArray(value)?value:seed;}catch{return seed;}}
 const cap = s => s==='like-new'?'Like new':(s||'').replace(/\b\w/g,m=>m.toUpperCase());
-function findError(form){
- if(!form.title.trim())return 'Please complete the item title.';
- if(form.price.trim()==='' || !Number.isFinite(Number(form.price)) || Number(form.price)<0)return 'Enter a price of zero or more.';
- if(!categories.slice(1).includes(form.category))return 'Choose a category.';
- if(!conditions.includes(form.condition))return 'Choose an item condition.';
- if(!['active','sold'].includes(form.status))return 'Choose a valid status.';
- return '';
+function findErrors(form) {
+ const errors = {};
+
+ if (!form.title.trim()) {
+  errors.title = 'Enter an item title.';
+ }
+
+ if (
+  String(form.price).trim() === '' ||
+  !Number.isFinite(Number(form.price)) ||
+  Number(form.price) < 0
+ ) {
+  errors.price = 'Enter a price of zero or greater.';
+ }
+
+ if (!categories.slice(1).includes(form.category)) {
+  errors.category = 'Choose a category.';
+ }
+
+ if (!conditions.includes(form.condition)) {
+  errors.condition = 'Choose an item condition.';
+ }
+
+ if (!['active', 'sold'].includes(form.status)) {
+  errors.status = 'Choose a valid availability.';
+ }
+
+ return errors;
 }
 function ListingImage({src, alt, emoji, className=''}) {
  const [broken, setBroken] = useState(false);
@@ -34,6 +55,10 @@ function ListingImage({src, alt, emoji, className=''}) {
    : <span className="item-emoji" aria-label="Photo unavailable">{emoji || '📦'}</span>;
 }
 export default function App(){
+  const [fieldErrors, setFieldErrors] = useState({});
+const [zoomed, setZoomed] = useState(false);
+const [photoBusy, setPhotoBusy] = useState(false);
+const [photoError, setPhotoError] = useState('');
  const [items,setItems] = useState(saved);
  const [query,setQuery] = useState('');
  const [category,setCategory] = useState('all');
@@ -43,13 +68,217 @@ export default function App(){
  const [error,setError] = useState('');
  const [activePhoto,setActivePhoto] = useState(0);
  const [notice,setNotice] = useState('');
- useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
  const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
- function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
- function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
- if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ function startEdit(item) {
+ if (item && item.owner !== 'you') return;
+
+ setError('');
+ setFieldErrors({});
+ setPhotoError('');
+ setZoomed(false);
+
+ setEditor({
+  id: item?.id || null,
+  form: item
+   ? {
+      title: item.title,
+      price: String(item.price),
+      category: item.category,
+      condition: item.condition,
+      description: item.description || '',
+      pickup: item.pickup || '',
+      status: item.status,
+      photos: [...(item.photos || [])]
+     }
+   : {...emptyForm, photos: []}
+ });
+}
+
+function updateField(name, value) {
+ setEditor(previous => ({
+  ...previous,
+  form: {...previous.form, [name]: value}
+ }));
+
+ setFieldErrors(previous => {
+  const next = {...previous};
+  delete next[name];
+  return next;
+ });
+
+ setError('');
+}
+
+// Resize uploaded photos before storing them in this browser.
+function preparePhoto(file) {
+ return new Promise((resolve, reject) => {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+   reject(new Error('Choose JPG, PNG, or WebP photos.'));
+   return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+   reject(new Error('Each photo must be 5 MB or smaller.'));
+   return;
+  }
+
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+
+  image.onload = () => {
+   try {
+    const scale = Math.min(
+     1,
+     1200 / Math.max(image.naturalWidth, image.naturalHeight)
+    );
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Photo processing is unavailable.');
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    resolve(canvas.toDataURL('image/jpeg', 0.78));
+   } catch {
+    reject(new Error('Could not process this photo. Try another image.'));
+   } finally {
+    URL.revokeObjectURL(url);
+   }
+  };
+
+  image.onerror = () => {
+   URL.revokeObjectURL(url);
+   reject(new Error('Could not open this photo. Try another image.'));
+  };
+
+  image.src = url;
+ });
+}
+
+async function addPhotos(event) {
+ const files = Array.from(event.target.files || []);
+ event.target.value = '';
+
+ if (!files.length || photoBusy) return;
+
+ setPhotoError('');
+
+ if (editor.form.photos.length + files.length > 4) {
+  setPhotoError('You can add up to 4 photos. Remove one before adding more.');
+  return;
+ }
+
+ setPhotoBusy(true);
+
+ try {
+  const photos = await Promise.all(files.map(preparePhoto));
+
+  setEditor(previous => previous
+   ? {
+      ...previous,
+      form: {
+       ...previous.form,
+       photos: [...previous.form.photos, ...photos]
+      }
+     }
+   : previous
+  );
+ } catch (err) {
+  setPhotoError(err.message);
+ } finally {
+  setPhotoBusy(false);
+ }
+}
+
+function submit(event) {
+ event.preventDefault();
+ if (photoBusy) return;
+
+ const form = editor.form;
+ const errors = findErrors(form);
+ setFieldErrors(errors);
+ setError('');
+
+ if (Object.keys(errors).length) {
+  setError('Please correct the highlighted fields.');
+
+  requestAnimationFrame(() => {
+   document.getElementById(`field-${Object.keys(errors)[0]}`)?.focus();
+  });
+  return;
+ }
+
+ const original = editor.id
+  ? items.find(item => item.id === editor.id)
+  : null;
+
+ // Preserve the owner-only editing rule.
+ if (editor.id && (!original || original.owner !== 'you')) {
+  setError('You can only edit your own listings.');
+  return;
+ }
+
+ const next = {
+  ...form,
+  title: form.title.trim(),
+  price: Number(form.price),
+  description: form.description.trim(),
+  pickup: form.pickup.trim(),
+  photos: form.photos || [],
+  emoji: original?.emoji || '📦',
+  owner: 'you',
+  seller: currentUser.name,
+  sellerEmail: currentUser.email
+ };
+
+ const updated = editor.id
+  ? items.map(item => item.id === editor.id ? {...item, ...next} : item)
+  : [{
+     ...next,
+     id: `m-${Date.now()}`,
+     status: 'active'
+    }, ...items];
+
+ try {
+  localStorage.setItem(KEY, JSON.stringify(updated));
+ } catch {
+  setError(
+   'This browser could not save the listing. Your form is still here. ' +
+   'Try removing a photo or freeing browser storage, then save again.'
+  );
+  return;
+ }
+
+ setItems(updated);
+ setNotice(editor.id ? 'Changes saved.' : 'Item listed.');
+ setEditor(null);
+ setSelected(null);
+ setZoomed(false);
+}
+
+function reset() {
+ try {
+  localStorage.setItem(KEY, JSON.stringify(seed));
+ } catch {
+  setNotice('Could not reset the demo because browser storage is unavailable.');
+  return;
+ }
+
+ setItems(seed);
+ setSelected(null);
+ setEditor(null);
+ setZoomed(false);
+ setQuery('');
+ setCategory('all');
+ setSort('featured');
+ setNotice('Example items restored.');
+}
  return <div className="market-app">
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
   <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
@@ -58,7 +287,57 @@ export default function App(){
    <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
     <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
+<div className="listing-grid">
+ {listing.map(item => (
+  <article className="product" key={item.id}>
+   <button
+    type="button"
+    className="product-open"
+    onClick={() => {
+     setSelected(item.id);
+     setZoomed(false);
+    }}
+    aria-label={`View ${item.title}, EGP ${item.price.toLocaleString()}${
+     item.status === 'sold' ? ', sold' : ''
+    }`}
+   >
+    <div className="photo">
+     <ListingImage
+      src={item.photos?.[0]}
+      alt={item.title}
+      emoji={item.emoji}
+      className="listing-img"
+     />
+
+     {item.status === 'sold' && (
+      <span className="stamp sold-badge">Sold</span>
+     )}
+    </div>
+
+    <div className="prod-details">
+     <div className="prod-topline">
+      <span className="muted">{cap(item.category)}</span>
+      <span className={`condition-label condition-${item.condition}`}>
+       {cap(item.condition)}
+      </span>
+     </div>
+
+     <h3>{item.title}</h3>
+     <p>{item.description}</p>
+
+     <div className="costline">
+      <strong>EGP {item.price.toLocaleString()}</strong>
+      <span className="view-hint" aria-hidden="true">View item ↗</span>
+     </div>
+    </div>
+   </button>
+  </article>
+ ))}
+
+ {listing.length === 0 && (
+  <p className="noresults">No listings match your search.</p>
+ )}
+</div>
    </section>
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
   </main>
@@ -70,16 +349,39 @@ export default function App(){
    return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setSelected(null)}>
     <section className="detail-panel" role="dialog" aria-modal="true" aria-label="Item details">
      <button className="close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
-     <div className="detail-visual">
-      <ListingImage src={images[activePhoto] || images[0]} alt={`${item.title} photo ${activePhoto+1}`} emoji={item.emoji} className="detail-img" />
-     </div>
+     <button
+ type="button"
+ className="detail-visual zoom-trigger"
+ disabled={!images.length}
+ onClick={() => setZoomed(true)}
+ aria-label={`Enlarge photo of ${item.title}`}
+>
+ <ListingImage
+  src={images[activePhoto] || images[0]}
+  alt={`${item.title} photo ${activePhoto + 1}`}
+  emoji={item.emoji}
+  className="detail-img"
+ />
+ {images.length > 0 && (
+  <span className="zoom-hint">Click to enlarge ⤢</span>
+ )}
+</button>
      {images.length>1&&<div className="detail-thumbs" aria-label="Item photos">{images.map((src,index)=><button type="button" key={index} className={activePhoto===index?'thumb active':'thumb'} aria-label={`Show photo ${index+1} of ${images.length}`} aria-pressed={activePhoto===index} onClick={()=>setActivePhoto(index)}><ListingImage src={src} alt="" emoji={item.emoji} className="thumb-img" /></button>)}</div>}
-     <p className="section-kicker">{cap(item.category)} · {cap(item.condition)}</p>
+<div className="detail-labels">
+ <span className="section-kicker">{cap(item.category)}</span>
+ <span className={`condition-label condition-${item.condition}`}>
+  {cap(item.condition)}
+ </span>
+ <span className={`availability-badge ${
+  item.status === 'sold' ? 'is-sold' : 'is-available'
+ }`}>
+  {item.status === 'sold' ? 'Sold' : 'Available'}
+ </span>
+</div>
      <h2>{item.title}</h2>
      <h3>EGP {item.price.toLocaleString()}</h3>
      <p className="item-description">{item.description||'No description supplied.'}</p>
      <div className="detail-meta"><p><strong>Pickup</strong><br/>{item.pickup || 'Arrange directly with seller'}</p><p><strong>Seller</strong><br/>{item.seller}</p></div>
-     <p className="muted">Status: {item.status}</p>
      {item.owner==='you'
        ? <button className="sell-cta" onClick={()=>startEdit(item)}>Edit your listing</button>
        : item.status==='sold'
@@ -88,6 +390,284 @@ export default function App(){
     </section>
    </div>;
   })()}
-  {editor&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditor(null)}><section className="sell-modal" role="dialog" aria-modal="true" aria-label={editor.id?'Edit item':'Sell item'}><div className="modal-head"><div><p className="section-kicker">CAMPUS EXCHANGE</p><h2>{editor.id?'Edit your listing':'Sell an item'}</h2><p>Add the details and we'll take care of the rest.</p></div><button className="close" onClick={()=>setEditor(null)}>×</button></div><form onSubmit={submit}><div className="field-grid"><label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label><label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label><label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label><label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label><label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>{editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}</div>{error&&<p className="alert" role="alert">{error}</p>}<div className="modal-foot"><button type="button" onClick={()=>setEditor(null)}>Cancel</button><button className="sell-cta" type="submit">{editor.id?'Save changes':'Publish item'}</button></div></form></section></div>}
+{zoomed && selected && (() => {
+ const item = items.find(value => value.id === selected);
+ const src = item?.photos?.[activePhoto] || item?.photos?.[0];
+
+ if (!src) return null;
+
+ return (
+  <div
+   className="overlay image-overlay"
+   onMouseDown={event => {
+    if (event.target === event.currentTarget) setZoomed(false);
+   }}
+  >
+   <section
+    className="image-viewer"
+    role="dialog"
+    aria-modal="true"
+    aria-label={`Enlarged photo of ${item.title}`}
+   >
+    <button
+     type="button"
+     className="close"
+     autoFocus
+     aria-label="Close enlarged photo"
+     onClick={() => setZoomed(false)}
+     onKeyDown={event => {
+      if (event.key === 'Escape') setZoomed(false);
+      if (event.key === 'Tab') event.preventDefault();
+     }}
+    >
+     ×
+    </button>
+
+    <ListingImage
+     src={src}
+     alt={item.title}
+     emoji={item.emoji}
+     className="enlarged-img"
+    />
+   </section>
+  </div>
+ );
+})()}
+
+{editor && (
+ <div className="overlay">
+  <section
+   className="sell-modal"
+   role="dialog"
+   aria-modal="true"
+   aria-label={editor.id ? 'Edit item' : 'Sell item'}
+  >
+   <div className="modal-head">
+    <div>
+     <p className="section-kicker">CAMPUS EXCHANGE</p>
+     <h2>{editor.id ? 'Edit your listing' : 'Sell an item'}</h2>
+     <p>Fields marked * are required. Photos are optional.</p>
+    </div>
+
+    <button
+     type="button"
+     className="close"
+     aria-label="Close listing form"
+     disabled={photoBusy}
+     onClick={() => setEditor(null)}
+    >
+     ×
+    </button>
+   </div>
+
+   <form onSubmit={submit} noValidate>
+    <div className="field-grid">
+     <label>
+      <span>Item title *</span>
+      <input
+       id="field-title"
+       required
+       value={editor.form.title}
+       onChange={event => updateField('title', event.target.value)}
+       placeholder="What are you selling?"
+       aria-invalid={Boolean(fieldErrors.title)}
+       aria-describedby={fieldErrors.title ? 'error-title' : undefined}
+      />
+      {fieldErrors.title && (
+       <small id="error-title" className="field-error">
+        {fieldErrors.title}
+       </small>
+      )}
+     </label>
+
+     <label>
+      <span>Price (EGP) *</span>
+      <input
+       id="field-price"
+       type="number"
+       min="0"
+       step="any"
+       required
+       value={editor.form.price}
+       onChange={event => updateField('price', event.target.value)}
+       placeholder="e.g. 250"
+       aria-invalid={Boolean(fieldErrors.price)}
+       aria-describedby={fieldErrors.price ? 'error-price' : undefined}
+      />
+      {fieldErrors.price && (
+       <small id="error-price" className="field-error">
+        {fieldErrors.price}
+       </small>
+      )}
+     </label>
+
+     <label>
+      <span>Category *</span>
+      <select
+       id="field-category"
+       required
+       value={editor.form.category}
+       onChange={event => updateField('category', event.target.value)}
+       aria-invalid={Boolean(fieldErrors.category)}
+       aria-describedby={fieldErrors.category ? 'error-category' : undefined}
+      >
+       <option value="">Choose a category</option>
+       {categories.slice(1).map(value => (
+        <option value={value} key={value}>{cap(value)}</option>
+       ))}
+      </select>
+      {fieldErrors.category && (
+       <small id="error-category" className="field-error">
+        {fieldErrors.category}
+       </small>
+      )}
+     </label>
+
+     <label>
+      <span>Condition *</span>
+      <select
+       id="field-condition"
+       required
+       value={editor.form.condition}
+       onChange={event => updateField('condition', event.target.value)}
+       aria-invalid={Boolean(fieldErrors.condition)}
+       aria-describedby={fieldErrors.condition ? 'error-condition' : undefined}
+      >
+       <option value="">Choose a condition</option>
+       {conditions.map(value => (
+        <option value={value} key={value}>{cap(value)}</option>
+       ))}
+      </select>
+      {fieldErrors.condition && (
+       <small id="error-condition" className="field-error">
+        {fieldErrors.condition}
+       </small>
+      )}
+     </label>
+
+     <div className="photo-upload wide">
+      <label htmlFor="item-photos">Item photos</label>
+      <p id="photo-help">
+       Add up to 4 photos. JPG, PNG or WebP, up to 5 MB each.
+       The first photo is the cover.
+      </p>
+
+      <input
+       id="item-photos"
+       type="file"
+       accept="image/jpeg,image/png,image/webp"
+       multiple
+       disabled={photoBusy || editor.form.photos.length >= 4}
+       aria-describedby="photo-help photo-feedback"
+       onChange={addPhotos}
+      />
+
+      <div id="photo-feedback" aria-live="polite">
+       {photoBusy && <p>Preparing photos…</p>}
+       {photoError && <p className="field-error">{photoError}</p>}
+      </div>
+
+      {editor.form.photos.length > 0 && (
+       <div className="upload-previews">
+        {editor.form.photos.map((src, index) => (
+         <div className="upload-preview" key={`${index}-${src.slice(-20)}`}>
+          <ListingImage
+           src={src}
+           alt={`Listing photo ${index + 1}`}
+           emoji="📦"
+           className="preview-img"
+          />
+          {index === 0 && <span className="cover-label">Cover</span>}
+          <button
+           type="button"
+           disabled={photoBusy}
+           aria-label={`Remove photo ${index + 1}`}
+           onClick={() => updateField(
+            'photos',
+            editor.form.photos.filter((_, position) => position !== index)
+           )}
+          >
+           Remove
+          </button>
+         </div>
+        ))}
+       </div>
+      )}
+     </div>
+
+     <label className="wide">
+      <span>Description</span>
+      <textarea
+       value={editor.form.description}
+       onChange={event => updateField('description', event.target.value)}
+       placeholder="Describe the item, its features and any signs of wear."
+       rows="4"
+      />
+     </label>
+
+     <label className="wide">
+      <span>Pickup / meetup location</span>
+      <input
+       value={editor.form.pickup}
+       onChange={event => updateField('pickup', event.target.value)}
+       placeholder="e.g. Library entrance or arrange on campus"
+      />
+     </label>
+
+     <label className="wide">
+      <span>Seller contact email</span>
+      <input
+       value={currentUser.email}
+       readOnly
+       aria-readonly="true"
+       className="readonly-input"
+      />
+      <small className="email-helper">
+       Taken from your registered account, so buyers can contact you.
+      </small>
+     </label>
+
+     {editor.id && (
+      <label>
+       <span>Availability</span>
+       <select
+        id="field-status"
+        value={editor.form.status}
+        onChange={event => updateField('status', event.target.value)}
+        aria-invalid={Boolean(fieldErrors.status)}
+        aria-describedby={fieldErrors.status ? 'error-status' : undefined}
+       >
+        <option value="active">Available</option>
+        <option value="sold">Sold</option>
+       </select>
+       {fieldErrors.status && (
+        <small id="error-status" className="field-error">
+         {fieldErrors.status}
+        </small>
+       )}
+      </label>
+     )}
+    </div>
+
+    {error && <p className="alert" role="alert">{error}</p>}
+
+    <div className="modal-foot">
+     <button
+      type="button"
+      disabled={photoBusy}
+      onClick={() => setEditor(null)}
+     >
+      Cancel
+     </button>
+     <button className="sell-cta" type="submit" disabled={photoBusy}>
+      {photoBusy
+       ? 'Preparing photos…'
+       : editor.id ? 'Save changes' : 'Publish item'}
+     </button>
+    </div>
+   </form>
+  </section>
+ </div>
+)}
  </div>;
 }
