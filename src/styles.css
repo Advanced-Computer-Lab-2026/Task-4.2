@@ -20,3 +20,24 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+.discover-right .sort input{border:0;outline:none;width:108px;min-width:0;color:#544f68;background:transparent;font-size:12px}
+.listing-toolbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;color:#8b8796;font-size:12px}
+.compare-open,.compare-add,.mark-sold,.compare-remove{border:1px solid #e3deea;background:#fff;color:#5f4b89;border-radius:9px;padding:9px 12px;font-size:11px;font-weight:700}
+.compare-open:disabled{opacity:.5;cursor:not-allowed}
+.compare-add{width:100%;margin-top:8px}
+.compare-add.selected{background:#f0ebfb;border-color:#cfc1eb}
+.owner-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mark-sold{border-color:#e7d8d2;color:#8b5146}
+.compare-modal{background:#fff;border-radius:24px;padding:30px;position:relative;box-shadow:0 30px 100px #16112855;width:min(1050px,100%);max-height:90vh;overflow:auto}
+.compare-modal h2{font:700 28px Outfit;margin:5px 0 20px}
+.compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.compare-card{border:1px solid #e9e5ec;border-radius:15px;padding:15px;min-width:0}
+.compare-img{width:100%;height:130px;object-fit:cover;border-radius:10px;background:#f0ecf7;display:grid;place-items:center}
+.compare-card h3{font-size:15px;min-height:36px}
+.compare-card dl{margin:0}
+.compare-card dl div{display:grid;grid-template-columns:80px 1fr;gap:8px;border-top:1px solid #eee;padding:9px 0;font-size:11px}
+.compare-card dt{color:#8b8796}
+.compare-card dd{margin:0;color:#403653;overflow-wrap:anywhere}
+.compare-remove{margin-top:12px}
+@media(max-width:700px){.discover-right .sort{flex:1}.discover-right .sort input{width:100%}.listing-toolbar{margin-top:14px}.compare-modal{padding:22px}.compare-grid{grid-template-columns:1fr}}
+.close{z-index:1}
