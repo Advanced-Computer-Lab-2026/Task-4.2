@@ -10,6 +10,8 @@ const categories = [
   "other",
 ];
 const conditions = ["new", "like-new", "used", "worn"];
+const MAX_WORDS = 200;
+const wordCount = (s) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 const currentUser = { name: "You", email: "you@example.com" }; // Demo account; no login backend
 const photo = (id) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=82`;
@@ -187,6 +189,8 @@ function findError(form) {
     return "Enter a price of zero or more.";
   if (!categories.slice(1).includes(form.category)) return "Choose a category.";
   if (!conditions.includes(form.condition)) return "Choose an item condition.";
+  if (wordCount(form.description) > MAX_WORDS)
+    return `Keep the description to ${MAX_WORDS} words or fewer.`;
   if (!["active", "sold"].includes(form.status))
     return "Choose a valid status.";
   return "";
@@ -214,6 +218,7 @@ export default function App() {
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("featured");
   const [condition, setCondition] = useState("all");
+  const [view, setView] = useState("all"); // "all" or "mine"
   const [selected, setSelected] = useState(null);
   const [editor, setEditor] = useState(null); // null or {id,form}
   const [error, setError] = useState("");
@@ -224,6 +229,7 @@ export default function App() {
   const listing = useMemo(() => {
     let a = items.filter(
       (x) =>
+        (view === "all" || x.owner === "you") &&
         (category === "all" || x.category === category) &&
         (condition === "all" || x.condition === condition) &&
         `${x.title} ${x.category} ${x.description}`
@@ -233,7 +239,17 @@ export default function App() {
     if (sort === "low") a.sort((a, b) => a.price - b.price);
     if (sort === "high") a.sort((a, b) => b.price - a.price);
     return a;
-  }, [items, category, condition, query, sort]);
+  }, [items, view, category, condition, query, sort]);
+  function showListings(nextView) {
+    setView(nextView);
+    setSelected(null);
+    if (nextView === "all") {
+      setQuery("");
+      setCategory("all");
+      setCondition("all");
+    }
+    document.getElementById("discover")?.scrollIntoView({ behavior: "smooth" });
+  }
   function startEdit(item) {
     if (item && item.owner !== "you") return;
     setError("");
@@ -294,6 +310,7 @@ export default function App() {
     setCategory("all");
     setSort("featured");
     setCondition("all");
+    setView("all");
     setNotice("Example items restored.");
   }
   return (
@@ -308,16 +325,30 @@ export default function App() {
           onClick={() => {
             setSelected(null);
             setCategory("all");
+            setView("all");
           }}
         >
           <span className="brand-icon">✳</span> CAMPUS
           <span className="brand-alt">exchange</span>
         </button>
+        <nav>
+          <button
+            className={view === "all" ? "on" : ""}
+            aria-pressed={view === "all"}
+            onClick={() => showListings("all")}
+          >
+            Browse all listings
+          </button>
+          <button
+            className={view === "mine" ? "on" : ""}
+            aria-pressed={view === "mine"}
+            onClick={() => showListings("mine")}
+          >
+            My listings
+          </button>
+        </nav>
         <div className="nav-actions">
           <span className="usercircle">Y</span>
-          <button className="sell-cta" onClick={() => startEdit(null)}>
-            + Sell an item
-          </button>
         </div>
       </header>
       <main>
@@ -333,14 +364,8 @@ export default function App() {
               Browse little finds, big essentials and almost everything in
               between.
             </p>
-            <button
-              onClick={() =>
-                document
-                  .getElementById("discover")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              Explore listings <span>↗</span>
+            <button className="sell-cta" onClick={() => startEdit(null)}>
+              + Sell an item
             </button>
           </div>
           <div className="promo-art">
@@ -353,9 +378,19 @@ export default function App() {
         <section className="discovery" id="discover">
           <div className="discover-top">
             <div>
-              <p className="section-kicker">CURATED FOR YOUR CAMPUS</p>
-              <h2>Find something good.</h2>
-              <p>Items listed by people around you.</p>
+              {view === "mine" ? (
+                <>
+                  <p className="section-kicker">YOUR ACCOUNT</p>
+                  <h2>My listings.</h2>
+                  <p>Items you've put up for sale.</p>
+                </>
+              ) : (
+                <>
+                  <p className="section-kicker">CURATED FOR YOUR CAMPUS</p>
+                  <h2>Find something good.</h2>
+                  <p>Items listed by people around you.</p>
+                </>
+              )}
             </div>
             <div className="discover-right">
               <label className="search">
@@ -423,13 +458,15 @@ export default function App() {
                 <div className="prod-details">
                   <div className="prod-topline">
                     <span className="muted">{item.category}</span>
-                    <span
-                      className={
-                        item.status === "sold" ? "soldstatus" : "instock"
-                      }
-                    >
-                      {item.status.toUpperCase()}
-                    </span>
+                    {view === "mine" && (
+                      <span
+                        className={
+                          item.status === "sold" ? "soldstatus" : "instock"
+                        }
+                      >
+                        {item.status.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
@@ -441,7 +478,11 @@ export default function App() {
               </article>
             ))}
             {listing.length === 0 && (
-              <p className="noresults">No listings match your search.</p>
+              <p className="noresults">
+                {view === "mine" && !items.some((x) => x.owner === "you")
+                  ? "You haven't listed anything yet."
+                  : "No listings match your search."}
+              </p>
             )}
           </div>
         </section>
@@ -480,72 +521,78 @@ export default function App() {
                 >
                   ×
                 </button>
-                <div className="detail-visual">
-                  <ListingImage
-                    src={images[activePhoto] || images[0]}
-                    alt={`${item.title} photo ${activePhoto + 1}`}
-                    emoji={item.emoji}
-                    className="detail-img"
-                  />
-                </div>
-                {images.length > 1 && (
-                  <div className="detail-thumbs" aria-label="Item photos">
-                    {images.map((src, index) => (
-                      <button
-                        type="button"
-                        key={index}
-                        className={
-                          activePhoto === index ? "thumb active" : "thumb"
-                        }
-                        aria-label={`Show photo ${index + 1} of ${images.length}`}
-                        aria-pressed={activePhoto === index}
-                        onClick={() => setActivePhoto(index)}
-                      >
-                        <ListingImage
-                          src={src}
-                          alt=""
-                          emoji={item.emoji}
-                          className="thumb-img"
-                        />
-                      </button>
-                    ))}
+                <div className="detail-media">
+                  <div className="detail-visual">
+                    <ListingImage
+                      src={images[activePhoto] || images[0]}
+                      alt={`${item.title} photo ${activePhoto + 1}`}
+                      emoji={item.emoji}
+                      className="detail-img"
+                    />
                   </div>
-                )}
-                <p className="section-kicker">
-                  {cap(item.category)} · {cap(item.condition)}
-                </p>
-                <h2>{item.title}</h2>
-                <h3>EGP {item.price.toLocaleString()}</h3>
-                <p className="item-description">
-                  {item.description || "No description supplied."}
-                </p>
-                <div className="detail-meta">
-                  <p>
-                    <strong>Pickup</strong>
-                    <br />
-                    {item.pickup || "Arrange directly with seller"}
-                  </p>
-                  <p>
-                    <strong>Seller</strong>
-                    <br />
-                    {item.seller}
-                  </p>
+                  {images.length > 1 && (
+                    <div className="detail-thumbs" aria-label="Item photos">
+                      {images.map((src, index) => (
+                        <button
+                          type="button"
+                          key={index}
+                          className={
+                            activePhoto === index ? "thumb active" : "thumb"
+                          }
+                          aria-label={`Show photo ${index + 1} of ${images.length}`}
+                          aria-pressed={activePhoto === index}
+                          onClick={() => setActivePhoto(index)}
+                        >
+                          <ListingImage
+                            src={src}
+                            alt=""
+                            emoji={item.emoji}
+                            className="thumb-img"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p className="muted">Status: {item.status}</p>
-                {item.owner === "you" ? (
-                  <button className="sell-cta" onClick={() => startEdit(item)}>
-                    Edit your listing
-                  </button>
-                ) : item.status === "sold" ? (
-                  <p className="fineprint">This item is marked as sold.</p>
-                ) : (
-                  <a
-                    className="sell-cta contact-seller"
-                    href={`mailto:${item.sellerEmail}?subject=${subject}&body=${body}`}
-                  >
-                    ✉ Contact seller
-                  </a>
-                )}
+                <div className="detail-info">
+                  <p className="section-kicker">
+                    {cap(item.category)} · {cap(item.condition)}
+                  </p>
+                  <h2>{item.title}</h2>
+                  <h3>EGP {item.price.toLocaleString()}</h3>
+                  <p className="item-description">
+                    {item.description || "No description supplied."}
+                  </p>
+                  <div className="detail-meta">
+                    <p>
+                      <strong>Pickup</strong>
+                      <br />
+                      {item.pickup || "Arrange directly with seller"}
+                    </p>
+                    <p>
+                      <strong>Seller</strong>
+                      <br />
+                      {item.seller}
+                    </p>
+                  </div>
+                  {item.owner === "you" && (
+                    <p className="muted">Status: {item.status}</p>
+                  )}
+                  {item.owner === "you" ? (
+                    <button className="sell-cta" onClick={() => startEdit(item)}>
+                      Edit your listing
+                    </button>
+                  ) : item.status === "sold" ? (
+                    <p className="fineprint">This item is marked as sold.</p>
+                  ) : (
+                    <a
+                      className="sell-cta contact-seller"
+                      href={`mailto:${item.sellerEmail}?subject=${subject}&body=${body}`}
+                    >
+                      ✉ Contact seller
+                    </a>
+                  )}
+                </div>
               </section>
             </div>
           );
@@ -653,6 +700,15 @@ export default function App() {
                     placeholder="Description"
                     rows="5"
                   />
+                  <small
+                    className={
+                      wordCount(editor.form.description) > MAX_WORDS
+                        ? "word-count over"
+                        : "word-count"
+                    }
+                  >
+                    {wordCount(editor.form.description)} / {MAX_WORDS} words
+                  </small>
                 </label>
                 <label className="wide">
                   <span>Pickup / meetup location</span>
