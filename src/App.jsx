@@ -37,7 +37,10 @@ export default function App(){
  const [items,setItems] = useState(saved);
  const [query,setQuery] = useState('');
  const [category,setCategory] = useState('all');
+ const [myListingsOnly,setMyListingsOnly] = useState(false);
  const [sort,setSort] = useState('featured');
+ const [minPrice,setMinPrice] = useState('');
+ const [maxPrice,setMaxPrice] = useState('');
  const [selected,setSelected] = useState(null);
  const [editor,setEditor] = useState(null); // null or {id,form}
  const [error,setError] = useState('');
@@ -45,20 +48,38 @@ export default function App(){
  const [notice,setNotice] = useState('');
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+ const priceError = [minPrice,maxPrice].some(value=>value!==''&&(!Number.isFinite(Number(value))||Number(value)<0))
+   ? 'Enter a price of zero or more.'
+   : minPrice!==''&&maxPrice!==''&&Number(minPrice)>Number(maxPrice)
+     ? 'Minimum price must be less than or equal to maximum price.' : '';
+ const clearPrice = () => {setMinPrice('');setMaxPrice('');};
+ const listing = useMemo(()=>{if(priceError)return [];let a=items.filter(x=>(!myListingsOnly||x.owner==='you')&&(category==='all'||x.category===category)&&(minPrice===''||x.price>=Number(minPrice))&&(maxPrice===''||x.price<=Number(maxPrice))&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort,minPrice,maxPrice,priceError,myListingsOnly]);
  function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
  function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
  if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setMinPrice('');setMaxPrice('');setMyListingsOnly(false);setNotice('Example items restored.');}
  return <div className="market-app">
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
+  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
   <main>
    <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
-   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
+   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label>
+    <div className="price-filters" role="group" aria-label="Filter by price in EGP">
+     <span className="price-filter-label">Price (EGP)</span>
+     <div className="price-inputs">
+      <input aria-label="Minimum price in EGP" type="number" min="0" step="any" inputMode="decimal" placeholder="Min" value={minPrice} aria-invalid={Boolean(priceError)} aria-describedby={priceError?'price-error':undefined} onChange={e=>setMinPrice(e.target.value)}/>
+      <span aria-hidden="true">–</span>
+      <input aria-label="Maximum price in EGP" type="number" min="0" step="any" inputMode="decimal" placeholder="Max" value={maxPrice} aria-invalid={Boolean(priceError)} aria-describedby={priceError?'price-error':undefined} onChange={e=>setMaxPrice(e.target.value)}/>
+     </div>
+     {(minPrice!==''||maxPrice!=='')&&<button className="clear-price" type="button" aria-label="Clear price filter" onClick={clearPrice}>Clear</button>}
+     {priceError&&<p id="price-error" className="price-range-error" role="alert">{priceError}</p>}
+    </div>
+    <label className="my-listings-filter"><input type="checkbox" checked={myListingsOnly} onChange={e=>setMyListingsOnly(e.target.checked)}/>My listings only</label>
+    </div></div>
     <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
+    <p className="results-count" role="status" aria-live="polite">{priceError?'Adjust your price range to see matching items.':`${listing.length} ${listing.length===1?'item':'items'} found${minPrice!==''||maxPrice!==''?' in your price range':''}`}</p>
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
+    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&!priceError&&<div className="noresults"><h3>No matching items</h3><p>Try a wider price range or change your search and category.</p><button type="button" className="details-button" onClick={()=>{clearPrice();setQuery('');setCategory('all');setMyListingsOnly(false);}}>Clear all filters</button></div>}</div>
    </section>
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
   </main>
