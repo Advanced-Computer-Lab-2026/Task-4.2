@@ -15,7 +15,8 @@ const seed = [
   {id:'m7', title:'MATH 201 workbook', category:'textbooks', condition:'used', price:140, description:'Workbook with practice problems, solutions and lecture notes. All pages present and in readable condition. Some exercises have answers written in pencil. Already sold to another student.', status:'sold', owner:'you', seller:'You', sellerEmail:currentUser.email, pickup:'GUC campus (previous listing)', photos:[photo('photo-1544947950-fa07a98d237f')], emoji:'📖'},
   {id:'m8', title:'Sketching kit', category:'other', condition:'like-new', price:180, description:'Charcoal pencils, graphite pencils, blending tools and an A5 sketch pad. Some pencils have been lightly used, but the set still has plenty of material for design practice and drawing assignments.', status:'active', owner:'other', seller:'Salma', sellerEmail:'salma.seller@example.com', pickup:'Meet outside the GUC architecture studios', photos:[photo('photo-1758521232691-613561977b6a'),photo('photo-1771366629879-8b3128ee62ca')], emoji:'🎨'},
 ];
-const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
+const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active', photos:[]};
+
 function saved(){try {const value=JSON.parse(localStorage.getItem(KEY));return Array.isArray(value)?value:seed;}catch{return seed;}}
 const cap = s => s==='like-new'?'Like new':(s||'').replace(/\b\w/g,m=>m.toUpperCase());
 function findError(form){
@@ -43,20 +44,270 @@ export default function App(){
  const [error,setError] = useState('');
  const [activePhoto,setActivePhoto] = useState(0);
  const [notice,setNotice] = useState('');
+  const [showFilters, setShowFilters] = useState(false); //natalie
+  const [statusFilter, setStatusFilter] = useState('all'); //natalie
+  const [conditionFilter, setConditionFilter] = useState('all'); //natalie
+
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+ //const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+   const listing = useMemo(()=>{
+    let a = items.filter(x => {
+      const matchesCategory = category === 'all' || x.category === category;
+      const matchesSearch = `${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || x.status === statusFilter;
+      const matchesCondition = conditionFilter === 'all' || x.condition === conditionFilter;
+      
+      return matchesCategory && matchesSearch && matchesStatus && matchesCondition;
+    });
+    if(sort==='low')a.sort((a,b)=>a.price-b.price);
+    if(sort==='high')a.sort((a,b)=>b.price-a.price);
+    return a;
+  },[items,category,query,sort,statusFilter,conditionFilter]);
+//natalie
+
  function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
- function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
+ function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next = {
+  ...f, 
+  title: f.title.trim(),
+  price: Number(f.price),
+  description: f.description.trim(),
+  pickup: f.pickup.trim(),
+  // Fall back to existing photos on edit, or use the newly uploaded ones, or fallback to default box emoji
+  photos: editor.id ? (original?.photos || []) : (f.photos.length > 0 ? f.photos : []),
+  emoji: original?.emoji || (f.photos.length > 0 ? '' : '📦'),
+  owner: 'you',
+  seller: currentUser.name,
+  sellerEmail: currentUser.email
+};
+
  if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');
+  setStatusFilter('all');
+setConditionFilter('all');
+
+setNotice('Example items restored.');}
  return <div className="market-app">
+  <style>{`
+  .overlay {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    background-color: rgba(15, 23, 42, 0.6) !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+  }
+  .detail-panel {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 640px !important;
+    max-height: calc(100vh - 48px) !important;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    overflow-y: auto !important;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04) !important;
+    box-sizing: border-box !important;
+  }
+  .detail-panel .close {
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    background: #f1f5f9 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 20px !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+    z-index: 1020 !important;
+    transition: background 0.15s ease !important;
+  }
+    .detail-panel {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 480px !important; /* Premium tight layout width */
+    max-height: calc(100vh - 40px) !important; /* Prevents card from going off-screen */
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important; /* Stack items vertically */
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important; /* Outer container won't show double scrollbars */
+  }
+
+  .detail-panel .close {
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    background: #f1f5f9 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 20px !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    z-index: 1020 !important;
+  }
+
+  /* Scrollable container for ALL contents inside the modal card */
+  .detail-panel > *:not(.close) {
+    width: 100%;
+  }
+
+  /* We put a clean scroll container on the inner content area so buttons/text are never cut off */
+  .detail-panel {
+    overflow-y: auto !important; /* Allow the modal body area to scroll nicely if text is huge */
+  }
+
+  .detail-visual {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 200px !important; /* Compact fixed frame height */
+    margin: 0 auto 12px auto !important;
+    background: #f8fafc !important; /* Clean light background box */
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important; /* Don't let it squish */
+  }
+
+  .detail-img {
+    max-width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important; /* Shows entire photo safely without huge white dead margins */
+    display: block !important;
+  }
+
+  .detail-thumbs {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Ensures your headers and description text stay neat and readable */
+  .detail-panel h2 {
+    font-size: 1.4rem !important;
+    margin: 8px 0 4px 0 !important;
+    text-align: left !important;
+    color: #0f172a !important;
+  }
+
+  .detail-panel h3 {
+    font-size: 1.2rem !important;
+    margin: 0 0 12px 0 !important;
+    text-align: left !important;
+    color: #059669 !important; /* Emerald green pricing look */
+  }
+
+  .item-description {
+    text-align: left !important;
+    font-size: 0.92rem !important;
+    color: #475569 !important;
+    line-height: 1.5 !important;
+    margin-bottom: 16px !important;
+  }
+
+`}</style>
+
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
   <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
   <main>
    <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
    <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
-    <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
+{/* Combined Horizontal Baseline Row for Categories and Filter Button */}
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '16px', marginTop: '16px', marginBottom: '24px', flexWrap: 'wrap', position: 'relative' }}>
+  <div className="category-row" style={{ margin: 0 }}>
+    {categories.map(c => (
+      <button key={c} onClick={() => setCategory(c)} className={category === c ? 'on' : ''}>
+        {c === 'all' ? 'All items' : cap(c)}
+      </button>
+    ))}
+  </div>
+
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+    <button 
+      onClick={() => setShowFilters(!showFilters)} 
+      style={{ 
+        background: showFilters ? '#f1f5f9' : '#ffffff', 
+        border: '1px solid #cbd5e1', 
+        padding: '8px 16px', 
+        borderRadius: '6px', 
+        color: '#334155', 
+        fontSize: '0.85rem', 
+        cursor: 'pointer', 
+        fontWeight: '500',
+        height: '38px', /* Ensures exact matching height alignment */
+        display: 'flex',
+        alignItems: 'center'
+      }}
+    >
+      All filters {(statusFilter !== 'all' || conditionFilter !== 'all') && '•'}
+    </button>
+
+    {showFilters && (
+      <div style={{ 
+        display: 'flex', 
+        gap: '16px', 
+        background: '#f8fafc', 
+        border: '1px solid #e2e8f0', 
+        borderRadius: '8px', 
+        padding: '12px 16px', 
+        boxSizing: 'border-box',
+        position: 'absolute',
+        top: 'calc(100% + 6px)',
+        right: 0,
+        zIndex: 10,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Availability</span>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.85rem', minWidth: '130px', cursor: 'pointer' }}>
+            <option value="all">All listings</option>
+            <option value="active">Active</option>
+            <option value="sold">Sold</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Condition</span>
+          <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.85rem', minWidth: '130px', cursor: 'pointer' }}>
+            <option value="all">All conditions</option>
+            {conditions.map(c => <option key={c} value={c}>{cap(c)}</option>)}
+          </select>
+        </div>
+
+        {(statusFilter !== 'all' || conditionFilter !== 'all') && (
+          <button 
+            onClick={() => { setStatusFilter('all'); setConditionFilter('all'); }} 
+            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', marginTop: 'auto', paddingBottom: '6px', fontWeight: '500' }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    )}
+  </div>
+</div>
+
+
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
     <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
    </section>
@@ -67,9 +318,12 @@ export default function App(){
    const images=item.photos || [];
    const subject=encodeURIComponent(`Campus Exchange: ${item.title}`);
    const body=encodeURIComponent(`Hi ${item.seller},\n\nI'm interested in your listing "${item.title}" (EGP ${item.price}). Is it still available?\n\n`);
-   return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setSelected(null)}>
-    <section className="detail-panel" role="dialog" aria-modal="true" aria-label="Item details">
-     <button className="close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
+   return <div className="overlay" onClick={e=>e.target===e.currentTarget&&setSelected(null)}>
+
+
+   <section className="detail-panel" role="dialog" aria-modal="true" aria-label="Item details"> 
+<button className="close" aria-label="Close item details" onClick={()=>setSelected(null)}>×</button>
+
      <div className="detail-visual">
       <ListingImage src={images[activePhoto] || images[0]} alt={`${item.title} photo ${activePhoto+1}`} emoji={item.emoji} className="detail-img" />
      </div>
@@ -88,6 +342,44 @@ export default function App(){
     </section>
    </div>;
   })()}
-  {editor&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditor(null)}><section className="sell-modal" role="dialog" aria-modal="true" aria-label={editor.id?'Edit item':'Sell item'}><div className="modal-head"><div><p className="section-kicker">CAMPUS EXCHANGE</p><h2>{editor.id?'Edit your listing':'Sell an item'}</h2><p>Add the details and we'll take care of the rest.</p></div><button className="close" onClick={()=>setEditor(null)}>×</button></div><form onSubmit={submit}><div className="field-grid"><label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label><label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label><label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label><label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label><label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>{editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}</div>{error&&<p className="alert" role="alert">{error}</p>}<div className="modal-foot"><button type="button" onClick={()=>setEditor(null)}>Cancel</button><button className="sell-cta" type="submit">{editor.id?'Save changes':'Publish item'}</button></div></form></section></div>}
+  {editor&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditor(null)}><section className="sell-modal" role="dialog" aria-modal="true" aria-label={editor.id?'Edit item':'Sell item'}><div className="modal-head"><div><p className="section-kicker">CAMPUS EXCHANGE</p><h2>{editor.id?'Edit your listing':'Sell an item'}</h2><p>Add the details and we'll take care of the rest.</p></div><button className="close" onClick={()=>setEditor(null)}>×</button></div><form onSubmit={submit}><div className="field-grid"><label><span>Item title *</span><input value={editor.form.title} onChange={e=>setEditor(s=>({...s,form:{...s.form,title:e.target.value}}))} placeholder="What are you selling?"/></label><label><span>Price (EGP) *</span><input type="number" min="0" step="0.01" value={editor.form.price} onChange={e=>setEditor(s=>({...s,form:{...s.form,price:e.target.value}}))} placeholder="Price"/></label><label><span>Category *</span><select value={editor.form.category} onChange={e=>setEditor(s=>({...s,form:{...s.form,category:e.target.value}}))}><option value="">Select</option>{categories.slice(1).map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label><span>Condition *</span><select value={editor.form.condition} onChange={e=>setEditor(s=>({...s,form:{...s.form,condition:e.target.value}}))}><option value="">Select</option>{conditions.map(c=><option value={c} key={c}>{cap(c)}</option>)}</select></label><label className="wide"><span>Description</span><textarea value={editor.form.description} onChange={e=>setEditor(s=>({...s,form:{...s.form,description:e.target.value}}))} placeholder="Description" rows="5"/></label><label className="wide"><span>Pickup / meetup location</span><input value={editor.form.pickup} onChange={e=>setEditor(s=>({...s,form:{...s.form,pickup:e.target.value}}))} placeholder="e.g. Library entrance or arrange on campus" /></label>
+  <label className="wide" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+  <span>Item Photo</span>
+  <input 
+    type="file" 
+    accept="image/*" 
+    onChange={(e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Converts image data into a local base64 string layout preview token
+          setEditor(s => ({
+            ...s,
+            form: { ...s.form, photos: [reader.result] }
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }}
+    style={{
+      padding: '8px',
+      border: '1px dashed #cbd5e1',
+      borderRadius: '6px',
+      background: '#f8fafc',
+      cursor: 'pointer'
+    }}
+  />
+  {editor.form.photos && editor.form.photos.length > 0 && (
+    <div style={{ marginTop: '8px' }}>
+      <img 
+        src={editor.form.photos[0]} 
+        alt="Preview" 
+        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+      />
+    </div>
+  )}
+</label>
+<label className="wide"><span>Seller contact email</span><input value={currentUser.email} readOnly aria-readonly="true" className="readonly-input"/><small className="email-helper">Taken from your registered account, so buyers can contact you about this item.</small></label>{editor.id&&<label><span>Status</span><select value={editor.form.status} onChange={e=>setEditor(s=>({...s,form:{...s.form,status:e.target.value}}))}><option value="active">Active</option><option value="sold">Sold</option></select></label>}</div>{error&&<p className="alert" role="alert">{error}</p>}<div className="modal-foot"><button type="button" onClick={()=>setEditor(null)}>Cancel</button><button className="sell-cta" type="submit">{editor.id?'Save changes':'Publish item'}</button></div></form></section></div>}
  </div>;
 }
