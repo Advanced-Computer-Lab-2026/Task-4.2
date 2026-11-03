@@ -20,3 +20,32 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* Keep the existing palette while reducing the time it takes to reach listings. */
+.promo{min-height:170px;margin-top:14px;border-radius:16px}
+.promo-copy{padding:16px 32px}
+.promo h1{font-size:30px;line-height:1.06;margin:7px 0}
+.promo h1 br{display:none}
+.promo p{margin-bottom:13px;font-size:12px}
+.promo-art{grid-template-columns:repeat(4,1fr);min-height:0;padding:10px 20px;gap:6px}
+.promo-art span{font-size:34px}
+.promo+.discovery{margin-top:20px}
+.photo{height:158px}
+.prod-details{padding:12px}
+.prod-details h3{margin:7px 0 4px}
+.prod-details>p{display:-webkit-box;min-height:0;max-height:34px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.costline{margin-top:8px}
+.details-button{margin-top:8px}
+
+.market-app.is-editing>.utility,
+.market-app.is-editing>.navigation,
+.market-app.is-editing>main{display:none}
+.market-app.is-editing>.overlay:not(:has(.sell-modal)){display:none}
+.market-app.is-editing>.overlay:has(.sell-modal){position:fixed;inset:0;z-index:20;display:block;height:100vh;min-height:100vh;padding:32px 20px;overflow-y:auto;background:#fbf9f6;backdrop-filter:none}
+.market-app.is-editing .sell-modal{width:min(860px,100%);max-width:860px;max-height:none;margin:0 auto;overflow:visible;border-radius:10px;box-shadow:none;transform:none}
+.market-app.is-editing .modal-head{padding-bottom:18px}
+.market-app.is-editing .modal-head h2{font-size:28px}
+.market-app.is-editing .modal-head .close{position:static;width:auto;height:auto;padding:9px 12px;border:1px solid #e7e2ed;border-radius:4px;background:#fff;font-size:0}
+.market-app.is-editing .modal-head .close::after{content:"Back to marketplace";font-size:12px;font-weight:600;color:#534b68}
+.market-app.is-editing .modal-foot{position:static;margin-top:14px;padding:14px 0;background:transparent}
+@media(max-width:700px){.promo{min-height:145px}.promo-copy{padding:16px 22px}.promo h1{font-size:24px}.promo-art{height:62px;padding:0 12px}.promo-art span{font-size:30px}.photo{height:145px}.market-app.is-editing>.overlay:has(.sell-modal){padding:14px}.market-app.is-editing .sell-modal{padding:20px}}
