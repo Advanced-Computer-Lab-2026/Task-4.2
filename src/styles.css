@@ -20,3 +20,57 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+/* ===== FIX 3: sold items must look sold ===== */
+.product.sold .listing-img,
+.product.sold .item-emoji { filter: grayscale(1); opacity: .55; }
+.product.sold .photo::after {
+  content: 'SOLD';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #211b3199;
+  font: 800 24px Outfit, sans-serif;
+  letter-spacing: .18em;
+}
+.product.sold .costline strong { color: #6b6577; text-decoration: line-through; }
+/* ===== FIX 2: text too small and too light ===== */
+.muted,
+.prod-details p,
+.costline span,
+.discover-top p,
+.sort span,
+.modal-head p,
+.field-grid .email-helper,
+.detail-panel .fineprint,
+.category-caption,
+footer { color: #5f596e; }
+
+.instock { color: #14705a; }
+footer button { color: #5a3f9e; font-size: 13px; }
+
+.stamp,
+.category-caption,
+.prod-topline { font-size: 11px; }
+
+.prod-details p,
+.costline,
+.details-button,
+.sort span,
+.field-grid .email-helper,
+.detail-panel .fineprint,
+footer { font-size: 13px; }
+
+.discover-top p,
+.search input,
+.sort select,
+.category-row button,
+.modal-head p,
+.field-grid label,
+.field-grid input,
+.field-grid select,
+.field-grid textarea,
+.detail-meta p,
+.alert { font-size: 14px; }
