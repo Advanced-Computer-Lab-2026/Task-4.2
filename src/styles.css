@@ -20,3 +20,80 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* ---- Redesign: prominent Sell, nav search, price/advanced filters, My listings ---- */
+.navigation{position:sticky;top:0;z-index:5}
+.nav-search{flex:1;max-width:520px;padding:11px 14px}
+.nav-search input{flex:1;min-width:0;font-size:14px;color:#3f3555}
+.nav-search:focus-within{border-color:#7956c3;box-shadow:0 0 0 3px #7956c333}
+.nav-actions .sell-cta{font-size:14px;padding:12px 20px;box-shadow:0 6px 16px #7956c340}
+.mine-link{border:1px solid transparent;background:none;color:#534b68;font-size:14px;font-weight:600;padding:9px 12px;border-radius:9px}
+.mine-link:hover{background:#f3effa}
+.mine-link.on{background:#3d315b;color:#fff}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.promo .hero-actions button.hero-sell{border:0;background:#7956c3;color:#fff;font-size:15px;padding:14px 24px;border-radius:12px;font-weight:700;box-shadow:0 8px 20px #7956c34d}
+.promo .hero-actions button{font-size:15px;padding:14px 20px}
+.promo .hero-actions button span{margin-left:14px}
+.promo p{margin-bottom:22px}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #7956c3;outline-offset:2px}
+.discover-top p{font-size:14px;color:#6d6680}
+.sort span{font-size:13px;color:#6d6680}.sort select{font-size:14px}
+.category-row{align-items:center}
+.category-row button{font-size:14px}
+.filters-toggle{display:inline-flex;align-items:center;gap:7px;margin-left:auto;border-style:dashed!important;font-weight:600}
+.filters-toggle.active{background:#f3effa!important;border-color:#7956c3!important;color:#4b3585!important}
+.filter-count{background:#7956c3;color:#fff;border-radius:100px;min-width:20px;height:20px;display:inline-grid;place-items:center;font-size:12px;font-weight:700}
+.filter-panel{display:flex;flex-wrap:wrap;gap:20px 28px;align-items:flex-start;background:#fff;border:1px solid #e4dfeb;border-radius:16px;padding:20px 22px;margin-bottom:16px}
+.price-filter{border:0;padding:0;margin:0;min-width:280px}
+.price-filter legend,.filter-field>span{font-size:13px;font-weight:700;color:#4b4360;padding:0;margin-bottom:8px}
+.price-inputs{display:flex;align-items:flex-end;gap:10px}
+.price-inputs label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6d6680}
+.price-inputs input{width:110px;border:1px solid #cfc8dc;border-radius:10px;padding:10px 12px;font-size:14px;color:#3f3555;background:#fff}
+.price-inputs .dash{padding-bottom:10px;color:#8b8796}
+.preset-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.preset-row button{border:1px solid #dcd7e6;background:#fff;color:#4b4360;border-radius:100px;padding:7px 14px;font-size:13px}
+.preset-row button.on{background:#3d315b;border-color:#3d315b;color:#fff}
+.range-warning{margin:10px 0 0;color:#a13a37;font-size:13px}
+.filter-field{display:flex;flex-direction:column}
+.filter-field select{border:1px solid #cfc8dc;border-radius:10px;padding:10px 12px;font-size:14px;color:#3f3555;background:#fff;min-width:170px}
+.filter-check{display:flex;align-items:center;gap:8px;font-size:14px;color:#4b4360;align-self:flex-end;padding-bottom:10px}
+.filter-check input{width:18px;height:18px;accent-color:#7956c3}
+.result-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 14px;font-size:14px;color:#5c546f}
+.result-line strong{color:#2d2540}
+.result-line button,.link-btn{margin-left:10px;border:0;background:none;color:#6a45b8;font-size:14px;font-weight:700;text-decoration:underline;padding:0}
+.noresults{font-size:15px}
+@media(max-width:970px){
+ .navigation{flex-wrap:wrap;gap:12px}
+ .nav-search{order:3;flex-basis:100%;max-width:none}
+ .nav-actions{margin-left:auto}
+}
+@media(max-width:600px){
+ .mine-link{padding:9px 8px;font-size:13px}
+ .nav-actions .sell-cta{padding:11px 14px}
+ .filters-toggle{margin-left:0}
+ .price-filter{min-width:0;width:100%}
+}
+
+/* ---- Hero actions: Sell + My listings in the bottom-right corner ---- */
+.promo{position:relative}
+.promo-art{padding-bottom:92px}
+.promo .hero-actions{position:absolute;right:36px;bottom:28px;gap:12px;flex-wrap:nowrap}
+.promo .hero-actions button.hero-mine{border:1px solid #6d5a96;background:#fff;color:#3d2f63;font-size:15px;font-weight:700;padding:14px 22px;border-radius:12px}
+.promo .hero-actions button.hero-mine:hover{background:#f6f1ff}
+.promo .hero-actions button.hero-mine.on{background:#3d315b;border-color:#3d315b;color:#fff}
+@media(max-width:600px){
+ .promo .hero-actions{position:static;padding:0 30px 26px;flex-wrap:wrap}
+ .promo-art{padding-bottom:3px}
+}
+
+/* ---- Sell + My listings moved next to the items; floating Sell when inline one is off-screen ---- */
+.promo-art{padding-bottom:32px}
+.discover-right{align-items:center}
+.discover-sell{font-size:14px;padding:13px 20px;white-space:nowrap;box-shadow:0 6px 16px #7956c340}
+.category-row button.mine-pill{border-color:#6d5a96;color:#3d2f63;font-weight:600}
+.category-row button.mine-pill.on{background:#3d315b;border-color:#3d315b;color:#fff}
+.fab{position:fixed;right:24px;bottom:24px;z-index:6;font-size:15px;padding:15px 24px;border-radius:100px;box-shadow:0 10px 28px #4a2f9a66}
+@media(max-width:600px){
+ .discover-right .discover-sell{flex:1 0 100%}
+ .fab{right:16px;bottom:16px}
+}

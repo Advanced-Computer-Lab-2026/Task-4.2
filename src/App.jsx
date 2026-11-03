@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const KEY = 'acl-marketplace-v3';
 const categories = ['all', 'textbooks', 'electronics', 'furniture', 'clothing', 'other'];
@@ -15,7 +15,9 @@ const seed = [
   {id:'m7', title:'MATH 201 workbook', category:'textbooks', condition:'used', price:140, description:'Workbook with practice problems, solutions and lecture notes. All pages present and in readable condition. Some exercises have answers written in pencil. Already sold to another student.', status:'sold', owner:'you', seller:'You', sellerEmail:currentUser.email, pickup:'GUC campus (previous listing)', photos:[photo('photo-1544947950-fa07a98d237f')], emoji:'📖'},
   {id:'m8', title:'Sketching kit', category:'other', condition:'like-new', price:180, description:'Charcoal pencils, graphite pencils, blending tools and an A5 sketch pad. Some pencils have been lightly used, but the set still has plenty of material for design practice and drawing assignments.', status:'active', owner:'other', seller:'Salma', sellerEmail:'salma.seller@example.com', pickup:'Meet outside the GUC architecture studios', photos:[photo('photo-1758521232691-613561977b6a'),photo('photo-1771366629879-8b3128ee62ca')], emoji:'🎨'},
 ];
-const emptyForm = {title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
+const pricePresets = [{label:'Under 200',min:'',max:'200'},{label:'200 – 500',min:'200',max:'500'},{label:'500 – 1,000',min:'500',max:'1000'},{label:'1,000+',min:'1000',max:''}];
+const quickCategories = ['all', 'textbooks', 'electronics', 'furniture', 'clothing'];
+const emptyForm ={title:'', price:'', category:'', condition:'', description:'', pickup:'', status:'active'};
 function saved(){try {const value=JSON.parse(localStorage.getItem(KEY));return Array.isArray(value)?value:seed;}catch{return seed;}}
 const cap = s => s==='like-new'?'Like new':(s||'').replace(/\b\w/g,m=>m.toUpperCase());
 function findError(form){
@@ -43,25 +45,63 @@ export default function App(){
  const [error,setError] = useState('');
  const [activePhoto,setActivePhoto] = useState(0);
  const [notice,setNotice] = useState('');
+ const [priceMin,setPriceMin] = useState('');
+ const [priceMax,setPriceMax] = useState('');
+ const [condition,setCondition] = useState('');
+ const [showSold,setShowSold] = useState(false);
+ const [mineOnly,setMineOnly] = useState(false);
+ const [filtersOpen,setFiltersOpen] = useState(false);
+ const sellRef = useRef(null);
+ const [sellVisible,setSellVisible] = useState(true); // floating Sell button shows only when the inline one is off-screen
+ useEffect(()=>{const el=sellRef.current;if(!el||!('IntersectionObserver' in window))return;const io=new IntersectionObserver(([e])=>setSellVisible(e.isIntersecting));io.observe(el);return()=>io.disconnect();},[]);
  useEffect(()=>localStorage.setItem(KEY,JSON.stringify(items)),[items]);
  useEffect(()=>setActivePhoto(0),[selected]);
- const listing = useMemo(()=>{let a=items.filter(x=>(category==='all'||x.category===category)&&`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(query.toLowerCase()));if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;},[items,category,query,sort]);
+ const listing = useMemo(()=>{
+  const min=priceMin===''?null:Number(priceMin), max=priceMax===''?null:Number(priceMax);
+  const q=query.trim().toLowerCase();
+  let a=items.filter(x=>
+   (category==='all'||x.category===category)&&
+   (!q||`${x.title} ${x.category} ${x.description}`.toLowerCase().includes(q))&&
+   (min===null||x.price>=min)&&(max===null||x.price<=max)&&
+   (!condition||x.condition===condition)&&
+   (showSold||mineOnly||x.status!=='sold')&&
+   (!mineOnly||x.owner==='you'));
+  if(sort==='low')a.sort((a,b)=>a.price-b.price);if(sort==='high')a.sort((a,b)=>b.price-a.price);return a;
+ },[items,category,query,sort,priceMin,priceMax,condition,showSold,mineOnly]);
+ const rangeInvalid = priceMin!=='' && priceMax!=='' && Number(priceMin)>Number(priceMax);
+ const hasFilters = !!(query.trim()||category!=='all'||priceMin!==''||priceMax!==''||condition||showSold||mineOnly);
+ const advancedCount = (priceMin!==''||priceMax!==''?1:0)+(condition?1:0)+(showSold?1:0)+(category==='other'?1:0);
+ function goToResults(){const el=document.getElementById('discover');if(el&&el.getBoundingClientRect().top>120)el.scrollIntoView({behavior:'smooth'});}
+ function clearFilters(){setQuery('');setCategory('all');setPriceMin('');setPriceMax('');setCondition('');setShowSold(false);setMineOnly(false);}
+ function toggleMine(){setMineOnly(v=>!v);goToResults();}
  function startEdit(item){if(item&&item.owner!=='you')return;setError('');setEditor({id:item?.id||null,form:item?{title:item.title,price:String(item.price),category:item.category,condition:item.condition,description:item.description,pickup:item.pickup || '',status:item.status}:{...emptyForm}});}
  function submit(event){event.preventDefault();const f=editor.form;const err=findError(f);if(err){setError('Unable to save item. Check the form.');return;}const original=editor.id?items.find(x=>x.id===editor.id):null;const next={...f, title:f.title.trim(),price:Number(f.price),description:f.description.trim(),pickup:f.pickup.trim(),photos:original?.photos || [],emoji:original?.emoji || '📦',owner:'you',seller:currentUser.name,sellerEmail:currentUser.email};
  if(editor.id){setItems(items.map(x=>x.id===editor.id?{...x,...next}:x));setNotice('Changes saved.');}else{setItems([{...next,id:`m-${Date.now()}`,status:'active'},...items]);setNotice('Item listed.');}setEditor(null);setSelected(null);}
- function reset(){setItems(seed);setSelected(null);setEditor(null);setQuery('');setCategory('all');setSort('featured');setNotice('Example items restored.');}
+ function reset(){setItems(seed);setSelected(null);setEditor(null);clearFilters();setSort('featured');setFiltersOpen(false);setNotice('Example items restored.');}
  return <div className="market-app">
   <div className="utility"><span>Campus Exchange</span><span>Trusted by students • All prices in EGP</span></div>
-  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);setCategory('all')}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><nav><a href="#discover">Browse items</a><button onClick={()=>setCategory('textbooks')}>Textbooks</button><button onClick={()=>setCategory('electronics')}>Electronics</button></nav><div className="nav-actions"><span className="usercircle">Y</span><button className="sell-cta" onClick={()=>startEdit(null)}>+ Sell an item</button></div></header>
+  <header className="navigation"><button className="brand" onClick={()=>{setSelected(null);clearFilters()}}><span className="brand-icon">✳</span> CAMPUS<span className="brand-alt">exchange</span></button><label className="search nav-search"><span aria-hidden="true">⌕</span><input type="search" aria-label="Search listings" placeholder="Search listings, e.g. lamp or calculus" value={query} onChange={e=>{setQuery(e.target.value);goToResults();}}/></label><div className="nav-actions"><span className="usercircle" title="Signed in as You">Y</span></div></header>
   <main>
-   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p><button onClick={()=>document.getElementById('discover')?.scrollIntoView({behavior:'smooth'})}>Explore listings <span>↗</span></button></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
-   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><label className="search"><span>⌕</span><input aria-label="Search listings" placeholder="Search listings" value={query} onChange={e=>setQuery(e.target.value)}/></label><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
-    <div className="category-row">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''}>{c==='all'?'All items':cap(c)}</button>)}</div>
+   <section className="promo"><div className="promo-copy"><span className="tag">THE CAMPUS MARKETPLACE</span><h1>Everything you need,<br/><i>right around campus.</i></h1><p>Browse little finds, big essentials and almost everything in between.</p></div><div className="promo-art"><span>📚</span><span>💡</span><span>🎧</span><span>🛋️</span></div></section>
+   <section className="discovery" id="discover"><div className="discover-top"><div><p className="section-kicker">CURATED FOR YOUR CAMPUS</p><h2>Find something good.</h2><p>Items listed by people around you.</p></div><div className="discover-right"><button ref={sellRef} type="button" className="sell-cta discover-sell" onClick={()=>startEdit(null)}>+ Sell an item</button><label className="sort"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div></div>
+    <div className="category-row">{quickCategories.map(c=><button key={c} onClick={()=>setCategory(c)} className={category===c?'on':''} aria-pressed={category===c}>{c==='all'?'All items':cap(c)}</button>)}<button type="button" className={mineOnly?'mine-pill on':'mine-pill'} aria-pressed={mineOnly} onClick={toggleMine}>My listings</button><button type="button" className={filtersOpen||advancedCount?'filters-toggle active':'filters-toggle'} aria-expanded={filtersOpen} aria-controls="filter-panel" onClick={()=>setFiltersOpen(o=>!o)}>⚙ Filters{advancedCount>0&&<span className="filter-count">{advancedCount}</span>}</button></div>
+    {filtersOpen&&<div className="filter-panel" id="filter-panel" role="group" aria-label="Advanced filters">
+     <fieldset className="price-filter"><legend>Price range (EGP)</legend>
+      <div className="price-inputs"><label><span>Min</span><input type="number" min="0" inputMode="numeric" placeholder="0" value={priceMin} onChange={e=>setPriceMin(e.target.value)}/></label><span className="dash" aria-hidden="true">–</span><label><span>Max</span><input type="number" min="0" inputMode="numeric" placeholder="Any" value={priceMax} onChange={e=>setPriceMax(e.target.value)}/></label></div>
+      <div className="preset-row">{pricePresets.map(p=>{const on=priceMin===p.min&&priceMax===p.max;return <button type="button" key={p.label} className={on?'on':''} aria-pressed={on} onClick={()=>{setPriceMin(on?'':p.min);setPriceMax(on?'':p.max);}}>{p.label}</button>;})}</div>
+      {rangeInvalid&&<p className="range-warning" role="alert">Minimum price is higher than the maximum.</p>}
+     </fieldset>
+     <label className="filter-field"><span>Condition</span><select value={condition} onChange={e=>setCondition(e.target.value)}><option value="">Any condition</option>{conditions.map(c=><option key={c} value={c}>{cap(c)}</option>)}</select></label>
+     <label className="filter-field"><span>Category</span><select value={category} onChange={e=>setCategory(e.target.value)}>{categories.map(c=><option key={c} value={c}>{c==='all'?'All categories':cap(c)}</option>)}</select></label>
+     <label className="filter-check"><input type="checkbox" checked={showSold} onChange={e=>setShowSold(e.target.checked)}/> Show sold items</label>
+    </div>}
+    <p className="result-line" role="status" aria-live="polite"><strong>{listing.length} {listing.length===1?'item':'items'}</strong>{mineOnly&&' · your listings'}{query.trim()&&` · matching “${query.trim()}”`}{hasFilters&&<button type="button" onClick={clearFilters}>Clear filters</button>}</p>
     {notice&&<p className="notice" role="status">{notice} <button onClick={()=>setNotice('')}>×</button></p>}
-    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search.</p>}</div>
+    <div className="listing-grid">{listing.map(item=><article className="product" key={item.id}><button className="photo" onClick={()=>setSelected(item.id)}><span className="stamp">{cap(item.condition)}</span><ListingImage src={item.photos?.[0]} alt={item.title} emoji={item.emoji} className="listing-img" /><span className="category-caption">{cap(item.category)}</span></button><div className="prod-details"><div className="prod-topline"><span className="muted">{item.category}</span><span className={item.status==='sold'?'soldstatus':'instock'}>{item.status.toUpperCase()}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="costline"><strong>EGP {item.price.toLocaleString()}</strong><span>{item.condition}</span></div><button className="details-button" onClick={()=>setSelected(item.id)}>View item <span>↗</span></button></div></article>)}{listing.length===0&&<p className="noresults">No listings match your search or filters. {hasFilters&&<button type="button" className="link-btn" onClick={clearFilters}>Clear filters</button>}</p>}</div>
    </section>
    <footer><strong>CAMPUS exchange</strong><span>From students, for students.</span><button onClick={reset}>Reset demo</button></footer>
   </main>
+  {!sellVisible&&!editor&&<button type="button" className="sell-cta fab" onClick={()=>startEdit(null)}>+ Sell an item</button>}
   {selected&&(()=>{
    const item=items.find(x=>x.id===selected);if(!item)return null;
    const images=item.photos || [];
