@@ -17,6 +17,16 @@
 .detail-meta p{font-size:12px;color:#635d6d;margin:12px 0}
 .detail-meta strong{color:#3c3550}
 .contact-seller{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin-top:9px}
+.item-page{max-width:1100px;margin:28px auto 0}
+.back-link{border:0;background:none;color:#6947b4;font-size:13px;font-weight:600;padding:0;margin-bottom:18px}
+.item-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:start;background:#fff;border:1px solid #e9e5ec;border-radius:24px;padding:32px;box-shadow:0 7px 20px #44335107}
+.item-gallery .detail-visual{height:auto;aspect-ratio:4/3;font-size:120px;margin-bottom:12px}
+.item-gallery .detail-thumbs{margin:0 0 19px}
+.item-info h1{font:700 36px Outfit;margin:10px 0;color:#29213b}
+.item-info .item-price{font:700 24px Outfit;color:#6947b4;margin:0 0 16px}
+.item-info .sell-cta{margin-top:12px}
+@media(max-width:800px){.item-layout{grid-template-columns:1fr;padding:20px;gap:24px}.item-info h1{font-size:28px}}
+.sell-cta-large{margin-top:20px;padding:16px 26px;font-size:15px;border-radius:12px;box-shadow:0 10px 24px #7956c340}
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
