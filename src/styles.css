@@ -20,3 +20,16 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+.price-range{display:flex;align-items:center;gap:8px}
+.price-range label{display:grid;gap:4px;color:#625b70;font-size:10px;font-weight:700}
+.price-range input{width:88px;min-height:38px;border:1px solid #e4dfeb;border-radius:9px;background:#fff;padding:0 9px;color:#302940;font-size:12px}
+.photo .stamp.condition-new,.condition-label.condition-new{background:#e2edff;color:#28538d}
+.photo .stamp.condition-like-new,.condition-label.condition-like-new{background:#def4e5;color:#176b3a}
+.photo .stamp.condition-used,.condition-label.condition-used{background:#fff0d6;color:#80520a}
+.photo .stamp.condition-worn,.condition-label.condition-worn{background:#fde2df;color:#963c35}
+.condition-label{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700}
+.details-button{border:1px solid #54248f;background:#54248f;color:#fff;font-weight:700;transition:background .15s ease,border-color .15s ease}
+.details-button:hover{border-color:#3e176f;background:#3e176f}
+@media(max-width:760px){.discover-right{flex-wrap:wrap}.price-range{flex:1 1 100%}}
+@media(max-width:420px){.price-range input{width:100%;min-width:0}.price-range label{flex:1}}
