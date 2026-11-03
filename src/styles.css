@@ -20,3 +20,147 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* Interaction, accessibility and responsive refinements */
+:root{--ink:#27223c;--muted-ink:#746d81;--purple:#7956c3;--purple-dark:#3d315b;--line:#e7e2ed;--surface:#fff}
+html{scroll-behavior:smooth}
+body{line-height:1.45;background:#fbf9f6}
+button,a,input,select,textarea{transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #b9a5ed;outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.navigation{position:sticky;top:0;z-index:5;box-shadow:0 4px 16px #4433510a}
+.brand:hover,.navigation nav a:hover,.navigation nav button:hover,footer button:hover{color:var(--purple)}
+.sell-cta:hover{background:#6544ad;transform:translateY(-1px)}
+.promo button:hover,.details-button:hover{border-color:#b3a1d5;background:#f8f5ff}
+.category-row button:hover{border-color:#b9a5d8;color:#554080}
+.category-row button.on:hover{background:#302547;border-color:#302547;color:#fff}
+.search:focus-within,.sort:focus-within{border-color:#ae98d5;box-shadow:0 0 0 3px #c9baf022}
+.listing-grid{align-items:stretch}
+.product{min-width:0;display:flex;flex-direction:column}
+.photo{aspect-ratio:4 / 3;height:auto;min-height:150px}
+.prod-details{display:flex;flex:1;flex-direction:column}
+.prod-details h3{overflow-wrap:anywhere}
+.details-button{margin-top:auto}
+.noresults{grid-column:1 / -1;padding:42px 16px;text-align:center;color:var(--muted-ink)}
+.noresults p{margin:0 0 14px}
+.noresults button{border:1px solid #ddd5ea;border-radius:9px;background:#fff;color:#654b96;padding:10px 14px;font-size:12px}
+.notice{display:flex;align-items:center;gap:10px}
+.notice button{margin-left:auto;float:none;border-radius:6px;padding:2px 7px;color:#48653b}
+.overlay{overflow-y:auto;overscroll-behavior:contain}
+.detail-panel,.sell-modal{margin:auto}
+.detail-panel .sell-cta{display:inline-flex;justify-content:center;width:100%;margin-top:6px}
+.modal-head{padding-right:48px}
+.modal-head p{line-height:1.5}
+.alert{margin:20px 0 0}
+.field-grid input::placeholder,.field-grid textarea::placeholder{color:#aaa3b1}
+.field-grid input:read-only{border-style:dashed}
+footer{flex-wrap:wrap}
+@media(max-width:970px){
+ .navigation nav{display:flex;align-items:center;margin-left:auto}
+ .navigation nav button{display:none}
+ .navigation nav a{font-size:12px}
+ .promo{min-height:270px}
+ .discover-top{align-items:flex-start}
+}
+@media(max-width:720px){
+ main{padding:0 16px}
+ .utility{padding-inline:16px}
+ .navigation{padding-inline:16px;gap:12px}
+ .promo{margin-top:16px;border-radius:18px}
+ .promo-copy{padding:28px 24px}
+ .promo-art{padding:16px 24px}
+ .discover-right{display:grid;grid-template-columns:minmax(0,1fr) auto}
+ .search{min-width:0}
+ .search input{min-width:0;width:100%}
+ .sort{min-width:0}
+ .sort select{min-width:0;max-width:130px}
+ .field-grid{grid-template-columns:1fr}
+ .field-grid label.wide{grid-column:span 1}
+ footer{margin-top:48px}
+}
+@media(max-width:460px){
+ .brand{font-size:17px}
+ .brand-icon{width:24px;height:24px}
+ .navigation nav a{font-size:11px}
+ .nav-actions{gap:0}
+ .sell-cta{padding:11px 12px;font-size:11px}
+ .promo h1{font-size:28px}
+ .promo-copy{padding:25px 20px}
+ .promo-art{height:96px;padding:4px 14px}
+ .promo-art span{font-size:30px}
+ .discover-right{grid-template-columns:1fr}
+ .sort{justify-content:space-between}
+ .sort select{max-width:none}
+ .category-row{margin-right:-16px;padding-right:16px}
+ .detail-panel,.sell-modal{border-radius:18px}
+ .modal-foot{position:sticky;bottom:-22px;background:#fff;padding-bottom:22px}
+ footer{align-items:flex-start;gap:8px 14px}
+ footer span{width:100%;order:3}
+ footer button{margin-left:auto}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+
+/* Product cards are the primary browsing target. */
+.product{cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.product:hover{transform:translateY(-4px);border-color:#d1c2eb;box-shadow:0 16px 30px #44335118}
+.product:active{transform:translateY(-1px)}
+.product:focus-visible{outline:3px solid #b9a5ed;outline-offset:3px;border-color:#a98bd8}
+.photo .listing-img{object-fit:contain;padding:12px}
+
+/* Keep the existing hero identity while reducing its vertical footprint. */
+.promo{min-height:260px}
+.promo-copy{padding:30px 44px}
+.promo h1{font-size:38px;margin:12px 0 10px}
+.promo p{margin-bottom:18px}
+.promo-art{padding:24px 40px}
+@media(max-width:720px){
+ .promo{min-height:0}
+ .promo-copy{padding:24px 22px}
+ .promo h1{font-size:30px;margin:10px 0 9px}
+ .promo p{margin-bottom:16px}
+ .promo-art{height:100px;padding:6px 20px}
+}
+@media(max-width:460px){
+ .promo-copy{padding:22px 18px}
+ .promo h1{font-size:27px}
+ .promo-art{height:82px;padding:3px 14px}
+}
+
+/* Compact the existing hero so the product section begins sooner. */
+.promo{min-height:200px;margin-top:16px}
+.promo-copy{padding:20px 36px}
+.promo h1{font-size:34px;margin:8px 0}
+.promo p{margin-bottom:14px}
+.promo-art{padding:16px 30px}
+.promo-art span{font-size:54px}
+.discovery{margin-top:28px}
+@media(max-width:970px){
+ .promo-copy{padding:18px 28px}
+ .promo h1{font-size:32px}
+ .promo-art{padding:14px 24px}
+}
+@media(max-width:600px){
+ .promo{margin-top:12px}
+ .promo-copy{padding:16px 20px}
+ .promo h1{font-size:28px;margin:7px 0}
+ .promo p{margin-bottom:12px}
+ .promo-art{height:72px;padding:2px 12px}
+ .promo-art span{font-size:29px}
+}
+@media(max-width:460px){
+ .promo-copy{padding:15px 18px}
+ .promo h1{font-size:26px}
+ .promo-art{height:64px}
+ .promo-art span{font-size:26px}
+}
+
+/* Detail images keep their full proportions inside a consistent responsive frame. */
+.detail-visual{height:auto;min-height:220px;aspect-ratio:4 / 3;display:grid;place-items:center;background:#f3f1f6}
+.detail-visual .detail-img{display:block;width:100%;height:100%;padding:16px;object-fit:contain;object-position:center}
+@media(max-width:600px){
+ .detail-visual{min-height:180px}
+ .detail-visual .detail-img{padding:10px}
+}
