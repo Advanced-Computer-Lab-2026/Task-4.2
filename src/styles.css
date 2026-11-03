@@ -20,3 +20,74 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* ---- UX refresh: icons, nav, CTAs, modals, scrollbars ---- */
+html{scroll-behavior:smooth;scrollbar-gutter:stable}
+*{scrollbar-width:thin;scrollbar-color:#cdc2e6 transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cdc2e6;border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:#b2a2d8}
+.icon{flex-shrink:0}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #7956c3;outline-offset:2px}
+
+/* Navigation */
+.navigation nav{gap:4px}
+.navigation nav a,.navigation nav button{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:10px;font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s}
+.navigation nav a:hover,.navigation nav button:hover{background:#f4effc;color:#5b3fa5}
+.navigation nav .on{background:#eee7fb;color:#5b3fa5;font-weight:700}
+@media(max-width:1250px){.navigation{gap:12px}.navigation nav a,.navigation nav button{padding:8px 9px;font-size:12px;gap:6px}}
+
+/* Category chips */
+.category-row button{display:inline-flex;align-items:center;gap:7px;transition:background .15s,border-color .15s,color .15s}
+.category-row button:not(.on):hover{background:#f4effc;border-color:#cdbdee;color:#5b3fa5}
+
+/* Call-to-action colours: each action type has its own colour */
+.sell-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .15s,box-shadow .15s}
+.sell-cta:hover{background:#6544b0;transform:translateY(-1px);box-shadow:0 6px 16px #5b3fa540}
+.sell-cta.cta-sell{background:#c8501f}.sell-cta.cta-sell:hover{background:#ae4218;box-shadow:0 6px 16px #c8501f40}
+.sell-cta.cta-edit{background:#3d315b}.sell-cta.cta-edit:hover{background:#2e2446;box-shadow:0 6px 16px #3d315b40}
+.sell-cta.cta-contact{background:#0f766e}.sell-cta.cta-contact:hover{background:#0b5f58;box-shadow:0 6px 16px #0f766e40}
+.sell-cta.cta-sold{background:#a16207}.sell-cta.cta-sold:hover{background:#854d0e;box-shadow:0 6px 16px #a1620740}
+.card-actions{display:flex;gap:8px}
+.card-actions .details-button{flex:1;width:auto;justify-content:center;align-items:center;gap:8px;background:#7956c3;border:1px solid #7956c3;color:#fff;font-weight:700;transition:background .15s}
+.card-actions .details-button:hover{background:#6544b0;border-color:#6544b0}
+.card-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 13px;border-radius:9px;font-size:11px;font-weight:700;color:#fff;border:1px solid transparent;transition:background .15s}
+.card-secondary.edit{background:#3d315b;border-color:#3d315b}.card-secondary.edit:hover{background:#2e2446}
+.card-secondary.contact{background:#0f766e;border-color:#0f766e}.card-secondary.contact:hover{background:#0b5f58}
+.ghost-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #ddd6ea;color:#4d4363;border-radius:10px;font-weight:600;font-size:12px;padding:12px 16px;transition:background .15s,border-color .15s}
+.ghost-btn:hover{background:#f6f2fd;border-color:#bfb0e0}
+
+/* Modals: close button sits outside the scroll area so nothing can cover it */
+.detail-panel{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.detail-scroll{padding:28px;overflow-y:auto;min-height:0}
+.sell-modal{padding:0;overflow:hidden}
+.modal-scroll{padding:28px;max-height:92vh;overflow-y:auto}
+.modal-head{padding-right:46px}
+.close{z-index:5;top:16px;right:16px;width:38px;height:38px;background:#fff;color:#3d315b;border:1px solid #e3dded;box-shadow:0 4px 14px #2a1f4a26;transition:background .15s,color .15s,border-color .15s}
+.close:hover{background:#3d315b;color:#fff;border-color:#3d315b}
+.detail-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.detail-actions .sell-cta{padding:12px 16px}
+.detail-actions .fineprint{margin:0;align-self:center}
+.contact-seller{margin-top:0}
+.status-line{font-size:12px;color:#8b8796;margin:12px 0 0}
+.status-line .instock,.status-line .soldstatus{font-weight:700}
+@media(max-width:600px){.detail-scroll,.modal-scroll{padding:22px}.detail-actions>*{flex:1 1 100%}}
+
+/* Manual price filter */
+.price-filter{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 20px}
+.price-label{font-size:12px;font-weight:700;color:#4d4363;margin-right:2px}
+.price-field{display:flex;align-items:center;gap:8px;border:1px solid #e4dfeb;background:#fff;border-radius:9px;padding:0 12px}
+.price-field:focus-within{border-color:#7956c3}
+.price-field span{font-size:11px;color:#9c97a6}
+.price-field input{border:0;outline:none;background:transparent;width:84px;padding:10px 0;font-size:12px;color:#3f3555}
+.price-dash{color:#b3adbf}
+.price-presets{display:flex;flex-wrap:wrap;gap:8px}
+.price-presets button{border:1px solid #d9cff0;background:#f7f3fe;color:#5b3fa5;border-radius:100px;padding:8px 14px;font-size:11px;font-weight:600;transition:background .15s,color .15s}
+.price-presets button:hover{background:#ece3fb}
+.price-presets button.on{background:#7956c3;border-color:#7956c3;color:#fff}
+.price-clear{display:inline-flex;align-items:center;gap:6px;border:1px solid #f0cfc4;background:#fff5f1;color:#b4411a;border-radius:100px;padding:8px 13px;font-size:11px;font-weight:700}
+.price-clear:hover{background:#ffe9e1}
+.result-count{margin-left:auto;font-size:12px;color:#8b8796}
+.price-alert{margin:-8px 0 16px}
+.sell-cta{white-space:nowrap}
