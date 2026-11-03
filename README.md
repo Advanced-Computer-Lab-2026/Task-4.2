@@ -33,3 +33,13 @@ A student wants to compare second-hand campus items, find an affordable listing 
 
 Your redesign should support the scenario above without removing or weakening the existing features.
 
+## Three UI/UX improvements
+
+1. **Clear form validation:** Sell/Edit shows a specific error beside every invalid field, highlights it, and focuses the first invalid field. Errors update as you correct the values. Demo: open **Sell an item**, click **Publish item** with empty fields, then fill them in. A negative price is rejected; zero is allowed.
+2. **Budget filtering:** **Maximum price (EGP)** limits listings to your budget and shows the result count. It works together with search, categories and price sorting. Demo: enter **250** to see the example listings priced at EGP 250 or less. **Clear filters** restores all listings without deleting data.
+3. **My listings filter:** **My listings only** lets the current user quickly find their active and sold items. Demo: clear filters, enable it, open **Calculus II textbook**, choose **Edit your listing**, change Status to **Sold**, and save. Refresh to show the saved status persists. Disable the filter to browse everyone’s listings again.
+
+Existing listing fields, ownership restrictions, active status for new listings, numeric non-negative prices, photos, seller email links, browser storage and Reset demo remain supported. No database or backend is needed.
+
+On Windows PowerShell, use `npm.cmd install` and `npm.cmd run dev` if execution policy blocks `npm`. Run `node --test tests/marketplace.test.mjs` for validation/filter checks and `npm.cmd run build` to check the production build.
+
