@@ -33,3 +33,13 @@ A student wants to compare second-hand campus items, find an affordable listing 
 
 Your redesign should support the scenario above without removing or weakening the existing features.
 
+
+## Updated marketplace interactions
+
+- Browse items clears search/category filters; My listings shows only your items with direct editing. Category buttons remain beside the listings, including on mobile.
+- Item details and listing forms have a sticky close header and support Escape. Background scrolling is locked while a dialog is open.
+- Posting and editing support up to six JPG, PNG or WebP photos (10 MB per file), previews, replacement, removal and cover selection. Images are resized before saving in browser storage. Cancel discards the draft; storage errors keep it open so photos can be removed before retrying.
+
+Run `node scripts/check-ui.cjs` for state/interaction checks. These checks simulate React state and browser image/storage APIs; they do not verify browser layout. Run `npm run build` to verify the production build.
+
+Budget filters accept an optional minimum and maximum price in EGP, including both endpoints. A live count shows matching listings. Clear filters resets search, category, price range and sorting within the current Browse items or My listings view. Negative or reversed ranges display a correction message.
