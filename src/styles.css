@@ -20,3 +20,81 @@
 .field-grid .readonly-input{background:#f6f4f8;color:#696278;cursor:default}
 .field-grid .email-helper{font-size:11px;color:#978fa2;font-weight:400;line-height:1.4}
 @media(max-width:600px){.detail-panel{padding:22px}.detail-meta{grid-template-columns:1fr}.detail-meta p{margin:6px 0}}
+
+/* Tabs: All items vs My listings */
+.tabs{display:flex;gap:4px;border-bottom:1px solid #e5e0ec;margin-bottom:26px}
+.tabs button{border:0;background:none;padding:12px 18px;font-size:14px;font-weight:600;color:#6d667d;border-bottom:3px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:8px}
+.tabs button.on{color:#3d315b;border-bottom-color:#7956c3}
+.tabs button:focus-visible{outline:2px solid #7956c3;outline-offset:2px;border-radius:6px}
+.tab-count{background:#efebf7;color:#5b4b80;border-radius:100px;padding:2px 8px;font-size:11px}
+.tabs button.on .tab-count{background:#7956c3;color:#fff}
+.discover-right{align-items:stretch}
+.discover-right .sell-cta{white-space:nowrap}
+.noresults .sell-cta{margin-top:4px}
+
+/* Form fields with inline validation */
+.field-grid .field{display:flex;flex-direction:column;gap:6px}
+.field-grid .field.wide{grid-column:span 2}
+.field-grid .field label{display:block;font-size:12px;font-weight:600;color:#5c546f}
+.req{color:#d0302b;font-weight:700}
+.field-grid .field-hint{font-size:11px;color:#7d7590;font-weight:400}
+.field-grid .field-error{font-size:12px;color:#b3261e;font-weight:500;display:flex;gap:5px}
+.field-grid .field-error::before{content:'⚠'}
+.field-grid .has-error input,.field-grid .has-error select,.field-grid .has-error textarea{border-color:#c9433d;background:#fffafa}
+.field-grid input:focus-visible,.field-grid select:focus-visible,.field-grid textarea:focus-visible{outline:2px solid #7956c3;outline-offset:1px;border-color:#7956c3}
+.field-grid .has-error input:focus-visible,.field-grid .has-error select:focus-visible,.field-grid .has-error textarea:focus-visible{outline-color:#c9433d}
+@media(max-width:600px){.field-grid .field.wide{grid-column:span 1}.tabs button{flex:1;justify-content:center;padding:12px 8px}.discover-right .sell-cta{flex-basis:100%}}
+
+/* Owner actions: Mark as sold / Relist */
+.owner-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.owner-actions .details-button{justify-content:center}
+.status-button{border:1px solid #bfe0d2;background:#eef8f3;color:#17694f;border-radius:9px;padding:10px;font-size:11px;font-weight:700}
+.status-button:hover{background:#e2f3ea}
+.status-button.relist{border-color:#e3dde9;background:#fff;color:#5b4b80}
+.owner-actions.detail{grid-template-columns:auto auto;justify-content:start;margin-top:9px}
+.owner-actions.detail .status-button{padding:12px 17px;font-size:12px}
+
+
+/* Toast notifications: slide in from the top, auto-dismiss */
+.toast-region{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:50;width:min(440px,calc(100% - 32px));pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;background:#2b2342;color:#fff;border-radius:14px;padding:12px 12px 12px 14px;box-shadow:0 14px 40px #16112850;font-size:13px;font-weight:500;animation:toast-in .3s cubic-bezier(.2,.9,.3,1.2),toast-out .3s ease-in 3.2s forwards}
+.toast-icon{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:#2fa67a;font-size:12px;font-weight:800}
+.toast span:nth-child(2){flex:1}
+.toast button{border:0;background:#ffffff1a;color:#fff;width:26px;height:26px;border-radius:50%;font-size:16px;line-height:1;flex:none}
+.toast button:hover{background:#ffffff33}
+@keyframes toast-in{from{opacity:0;transform:translateY(-120%)}to{opacity:1;transform:none}}
+@keyframes toast-out{to{opacity:0;transform:translateY(-120%)}}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* Status badges */
+.status-badge{display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:5px 10px 5px 8px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.status-badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.status-badge.active{background:#e6f6ee;color:#16704f}
+.status-badge.sold{background:#fdecea;color:#b0302a}
+.photo .photo-status{position:absolute;top:12px;right:12px;z-index:2}
+.photo .photo-status .status-badge{box-shadow:0 2px 8px #2a1f3d1f}
+.photo .photo-status .status-badge.active{background:#fff}
+.photo .stamp{z-index:2}
+.sold-overlay{position:absolute;inset:0;z-index:1;display:grid;place-items:center;background:#2a1f3d59;color:#fff;font:800 22px Outfit,sans-serif;letter-spacing:.3em;text-transform:uppercase}
+.product.is-sold .listing-img,.product.is-sold .item-emoji{filter:grayscale(.85)}
+.product.is-sold .costline strong{color:#9a93a6;text-decoration:line-through}
+.product.is-sold h3{color:#6f687c}
+.price-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.price-row h3{margin:6px 0}
+.sold-note{background:#fdf3f2;border:1px solid #f4d6d3;color:#8f3a35;border-radius:10px;padding:10px 14px;font-size:12px}
+
+/* Purple info bar now sits at the very bottom of the page */
+footer{margin-bottom:0}
+.utility{margin-top:0}
+
+/* Nav shortcut to My listings */
+.nav-mine{display:inline-flex;align-items:center;gap:8px;border:0;background:#7956c3;color:#fff;border-radius:10px;padding:10px 15px;font-size:13px;font-weight:700}
+.nav-mine:hover{background:#6845b3}
+.nav-mine.on{background:#5a3a9e;box-shadow:inset 0 0 0 2px #c9b6f0}
+.nav-mine:focus-visible{outline:2px solid #7956c3;outline-offset:2px}
+.discover-right .sort select{min-width:0}
+.clear-filters{width:auto;justify-content:center;padding:10px 16px}
+
+/* Compact cards: title + price only, details live in the popup */
+.prod-details h3{margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod-details .costline{border-top:0;margin-top:0;padding:0 0 12px}
